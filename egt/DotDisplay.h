@@ -43,8 +43,8 @@ public:
   virtual string epsfile(void)
   { return filebasename()+".eps"; }
   
-  void _update(void);
-  void record();
+  //void _update(void);
+  void recordFile();
   void updateDisplay(void);
 };
 
@@ -67,7 +67,7 @@ public:
       updateDisplay();
   }
 
-  void record()
+  void recordFile()
   {
     graphfile = xs->dotdir()+'/'+xs->graphfile();
     os.open(graphfile.c_str());
@@ -149,7 +149,9 @@ public:
     if (wrote)
     {
       string dotcomm =
-	string("/usr/bin/dot -Tps -o") + xs->dotdir() + "/" + xs->epsfile()
+	//string("/usr/bin/dot -Tps -o")
+	string("/usr/bin/neato -Goverlap=scale -Gsplines=true -Tps -o")
+	+ xs->dotdir() + "/" + xs->epsfile()
 	+ " " + graphfile;
       
       //cout << dotcomm << endl;
@@ -166,9 +168,11 @@ public:
     {
 //       cerr << "DotDisplay::~DotDisplay() : kill child process "
 // 	   << gvpid << endl;
-      kill(gvpid,SIGINT);
+
+      //kill(gvpid,SIGINT);
+
       //cout << "Waiting for gv to terminate" << endl;
-      waitpid(gvpid,0,0);
+      //waitpid(gvpid,0,0);
 //       cerr << "DotDisplay::~DotDisplay() : "
 // 	   << gvpid << " terminated" << endl;
     }

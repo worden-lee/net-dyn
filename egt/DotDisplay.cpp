@@ -7,25 +7,28 @@ DotGraphController::DotGraphController(double dperiod, double fperiod)
 void DotGraphController::createDisplay()
 { display = new DotDisplay(this); }
 
-void DotGraphController::_update(void)
-{
-  if (allowRecording())
-    record();
-  if (allowDisplaying())
-    DisplayController<DotDisplay>::updateDisplay();
-}
-void DotGraphController::record()
+// void DotGraphController::_update(void)
+// {
+//   if (allowRecording())
+//     recordFile();
+//   if (allowDisplaying())
+//     DisplayController<DotDisplay>::updateDisplay();
+// }
+
+void DotGraphController::recordFile()
 {
   if (allowRecording())
   { if (!display)
       createDisplay();
-    display->record();
+    display->recordFile();
   }
 }
 
 void DotGraphController::updateDisplay(void)
 {
-  _update();
+  //  _update();
+  if (allowDisplaying())
+    DisplayController<DotDisplay>::updateDisplay();
 }
 
 DotGraphController::~DotGraphController()

@@ -43,10 +43,10 @@ public:
       createDisplay();
     display->updateDisplay();
   }
-  virtual void recordCommunity(void)
+  virtual void recordFile(void)
   { if (!display)
       createDisplay();
-    display->recordCommunity();
+    display->recordFile();
   }
 
   virtual void update(double t)
@@ -55,7 +55,7 @@ public:
       createDisplay();
     if (recordEvery > 0 && recordCounter+recordEvery <= t)
     {
-      recordCommunity();
+      recordFile();
       recordCounter = t;
     }
     if (displayEvery > 0 && displayCounter+displayEvery <= t)

@@ -12,7 +12,7 @@ public:
   virtual void flush() {}
   // override one or both of these
   virtual void updateDisplay(void) {}
-  virtual void recordCommunity(void) {}
+  virtual void recordFile(void) {}
 };
 
 #endif // DISPLAY_H
