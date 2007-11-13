@@ -1,7 +1,8 @@
+#include <boost/random.hpp>
 
 // ------ parameters for experiment -------
 
-//  --- globally relevant
+//  --- global stuff
 
 // whether to print information to the terminal
 bool print_stuff = true;
@@ -9,14 +10,15 @@ bool print_stuff = true;
 //  --- for the main function
 
 // start with a random graph with this many vertices and edges
-int init_n_vertices = 12;//4;
-//double init_density = 0;
+int init_n_vertices = 15;//12;//3;//16;
+double init_density = 0;
 
 //  --- for the optimizer
 
 // to control whether it displays the graphs while optimizing
 bool animate_optimization = true;//false;
 
+// whether the 'fitness' needs to be evaluated multiple times
 // simpler if not
 bool indicator_is_stochastic = false;//true
 
@@ -38,14 +40,14 @@ int trialsForLocalOptimum = indicator_is_stochastic ? 200 : 1;//10;
 //   choose a parent among the child's in-neighbors, weighted by
 //     fitness and edge weight
 // (though so far, edge weights are assumed to be 1)
-bool choose_parent_first = true;
+bool choose_parent_first = true;//false;
 
 // fitness at the 'normal' vertices
 double residentFitness = 1;
 
 // fitness of the mutant type, which might go to fixation
-//double mutantFitness = 1.2;//1.1;
-double mutantFitness = 0.9; // less than resident to select for drift
+double mutantFitness = 1.2;//1.1;
+//double mutantFitness = 0.9; // less than resident to select for drift
 
 // this animation isn't implemented
 bool animate_fixation = false;
@@ -61,11 +63,37 @@ int maxStepsToFixation = 1000;
 
 // -----------------------------------------
 
+#if 0
+// this is like the plain network object, but it's a regular network
+// plus a diff
+template<typename network_t>
+class variation
+{
+public:
+  typedef typename graph_traits<network_t>::vertex_descriptor vertex;
+  typedef pair<vertex,vertex> possible_edge_t;
+  typedef enum{ subtract, add } edge_operation_t;
+  typedef pair<edge_operation_t, possible_edge_t> diff_t;
+  network_t &n;
+  diff_t _diff;
+  variation(network_t&_n,diff_t _d) : n(_n), _diff(_d)
+  {}
+  network_t &network()
+  { return n;
+  }
+  diff_t &diff()
+  { return _diff;
+  }  
+};
+#endif
+
+// -----------------------------------------
+
 // global random number generator, used throughout
 typedef boost::minstd_rand rng_t;
 extern rng_t rng;
 
 // use these types to actually get random numbers
-typedef variate_generator<rng_t&, uniform_int<> >  ui_t;
-typedef variate_generator<rng_t&, uniform_real<> > ur_t;
+typedef boost::variate_generator<rng_t&, boost::uniform_int<> >  ui_t;
+typedef boost::variate_generator<rng_t&, boost::uniform_real<> > ur_t;
 

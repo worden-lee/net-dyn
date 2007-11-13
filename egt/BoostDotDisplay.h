@@ -1,5 +1,7 @@
 #include "DotDisplay.h"
 #include <boost/graph/graphviz.hpp>
+#include "util.h"
+#include "indicators.h"
 using namespace boost;
 
 template<typename network_t>
@@ -88,27 +90,116 @@ template<typename network_t>
 color_3_loops<network_t> make_color_3_loops(network_t&n)
 { return color_3_loops<network_t>(n);
 }
-  
+
 template<typename network_t>
 color_loops_23<network_t> make_color_loops_23(network_t&n)
 { return color_loops_23<network_t>(n);
 }
   
-template<typename colorer>
-class colormap
+template<typename network_t>
+class color_vertices : public put_get_helper< string,
+					      color_vertices<network_t> >
+{
+protected:
+  network_t &n;
+public:
+  typedef typename graph_traits<network_t>::vertex_descriptor key_type;
+  typedef string value_type;
+  color_vertices(network_t&_n) : n(_n) {}
+
+  virtual value_type operator[](const key_type &e) const = 0;
+};
+
+template<typename network_t>
+class color_temperature : public color_vertices<network_t>
+{
+//   typedef constant_property_map<
+//     typename graph_traits<network_t>::edge_descriptor, int > wm_t;
+  typedef stochastic_edge_weight_map<network_t> wm_t;
+  wm_t wm;
+public:
+  typedef typename color_vertices<network_t>::key_type key_type;
+  typedef typename color_vertices<network_t>::value_type value_type;
+  using color_vertices<network_t>::n;
+
+  color_temperature(network_t&n) : color_vertices<network_t>(n), wm(n) {}
+  value_type operator[](const key_type &e) const
+  { typename graph_traits<network_t>::vertices_size_type nv = num_vertices(n);
+    double temp = temperature(e, n, wm);
+    // this scales 0 -> 1, 1 -> ~1/2, nv-1 -> 1
+    // if all temps are 1, it's an isothermic graph, which is
+    // equivalent to the Moran process
+    double scaled = temp / (1 + ((double)nv-2)/(nv-1)*temp);
+    // this makes the middle brighter
+    scaled = sqrt(scaled);
+    unsigned int byte =
+      static_cast<unsigned int>(255*scaled);
+    return stringf("#%02x%02x%02x",byte,0,255-byte); // rgb
+  }
+};
+  
+template<typename network_t>
+color_temperature<network_t> make_color_temperature(network_t&n)
+{ return color_temperature<network_t>(n);
+}
+  
+template<typename property_t>
+class string_property_map
 {
 public:
-  const colorer &ce;
-  typedef typename colorer::key_type key_type;
-  typedef vector< pair<string,typename colorer::value_type> > value_type;
-  colormap(const colorer&_ce) :ce(_ce) {}
+  string name;
+  const property_t &property;
+  typedef typename property_t::key_type key_type;
+  typedef vector< pair<string,typename property_t::value_type> > value_type;
+  string_property_map(string _nm, const property_t&_pr)
+    : name(_nm), property(_pr) {}
   value_type operator[](const key_type &e) const
-  {
-    value_type v;
-    v.push_back(make_pair("color",ce[e]));
+  { value_type v;
+    v.push_back(make_pair(name,property[e]));
     return v;
   }
 };
+
+template<typename bool_indicator, typename context_t>
+class bool_string_property_map
+{
+public:
+  string name;
+  string if_yes, if_no;
+  bool_indicator &indicator;
+  context_t &context;
+  //typedef key_t key_type;
+  typedef vector< pair<string,string> > value_type;
+  bool_string_property_map(string _name, string _y, string _n,
+			   bool_indicator &_i, context_t &_c)
+    : name(_name), if_yes(_y), if_no(_n), indicator(_i), context(_c)
+  {}
+  template<typename key_t>
+  value_type operator[](const key_t&k) const
+  { value_type v;
+    v.push_back(make_pair(name,indicator(k,context) ? if_yes : if_no));
+    return v;
+  }
+};
+
+template<typename bool_indicator, typename subject_t>
+bool_string_property_map<bool_indicator, subject_t>
+make_bool_string_map(string _name, string _y, string _n, bool_indicator&_i,
+		     subject_t _context)
+{ return bool_string_property_map<bool_indicator,subject_t>
+    (_name, _y, _n, _i,_context);
+}
+
+template<typename colorer>
+class colormap : public string_property_map<colorer>
+{
+public:
+  typedef string_property_map<colorer> super;
+  typedef typename super::key_type   key_type;
+  typedef typename super::value_type value_type;
+  colormap(const colorer&_ce) : string_property_map<colorer>("color",_ce) {}
+};
+
 template<typename colorer>
 colormap<colorer> make_colormap(const colorer&co)
 { return colormap<colorer>(co);
@@ -129,27 +220,33 @@ public:
   void createDisplay();
   string outdir()
   {
-    return ".";
+    return "out";
   }
-  string filebasename(void)
+  string epsfile(void)
   {
-    return filebase;
+    return "network.eps";
   }
-  void update(double t, network_t &_n, string _filebase)
+  string graphfile(void)
+  {
+    return filebase + ".dot";
+  }
+  void update(double t, network_t &_n)
   {
     n = &_n;
-    filebase = _filebase;
-    //_update();
+    filebase = stringf("%g",t);
     DisplayController<DotDisplay>::update(t);
   }
   void writeGraph(ostream &os)
   {// write_graphviz(os, *n);
-    // write with colors?
-    default_writer vw;
-    write_graphviz(os,*n, vw,
-      make_attributes_writer(make_colormap(make_color_2_loops(*n))));
+    // assign colors to vertices
+    //default_writer vw;
+    // assign colors to edges
+    write_graphviz(os,*n,
+      make_attributes_writer(make_colormap(make_color_temperature(*n))),
+      //make_attributes_writer(make_colormap(make_color_2_loops(*n))));
+      make_attributes_writer(make_bool_string_map("style","bold","",
+				belongs_to_a_2_loop<network_t>,*n)));
   }
-  
 protected:
   string filebase;
   network_t *n;

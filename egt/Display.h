@@ -11,8 +11,8 @@ public:
   virtual void initialize(void) {}
   virtual void flush() {}
   // override one or both of these
-  virtual void updateDisplay(void) {}
-  virtual void recordFile(void) {}
+  virtual void updateDisplay(double t) {}
+  virtual void recordFile(double t) {}
 };
 
 #endif // DISPLAY_H

@@ -8,17 +8,25 @@
  *
  * you give an indicator to improveNetwork(), and it finds a network
  *  that optimizes the indicator.
+ *
+ * indicators are also used to gather statistics on the networks,
+ *  since each statistical measurement is an indicator.
 */
+#ifndef __indicators_h__
+#define __indicators_h__
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/random.hpp>
 #include <boost/graph/strong_components.hpp>
+#include <boost/graph/betweenness_centrality.hpp>
+#include <boost/vector_property_map.hpp>
 #include <numeric>
 #include <sstream>
 #include "network-optimize.h"
+using namespace boost;
 using namespace std;
 
 // represent a graph as a bit string, which is really the incidence
-// matrix strung out in a line.  used by selection_indicator.
+// matrix strung out in a line.  used for caching results.
 template<typename network_t>
 vector<bool> canonical(const network_t&n)
 { typename network_t::vertices_size_type nv = num_vertices(n);
@@ -30,6 +38,7 @@ vector<bool> canonical(const network_t&n)
 }
 
 // write out a vector of bits as a string of 0's and 1's.
+// useful for debugging caching.
 string vbstring(vector<bool>&vb)
 { string vs(vb.size(),'0');
   string::iterator si = vs.begin();
@@ -39,11 +48,301 @@ string vbstring(vector<bool>&vb)
   return vs;
 }
 
+template<typename subject_t, typename ret_t = double,
+	 typename indicator_t = ret_t(*)(const subject_t&)>
+class deterministic_indicator_caching
+{
+  indicator_t &indicator;
+  typedef map<vector<bool>,ret_t> cache_t;
+  cache_t cache;
+public:
+  // memory leak here
+  deterministic_indicator_caching() : indicator(*new indicator_t())
+  {}
+  deterministic_indicator_caching(indicator_t&_ind) : indicator(_ind)
+  {}
+  ret_t operator()(const subject_t&subject)
+  { vector<bool> key = canonical(subject);
+    typename cache_t::iterator past = cache.find(key);
+    if (past == cache.end())
+    { ret_t &answer = cache[key] = indicator(subject);
+    //cout << answer << '\n';
+      return answer;
+    }
+    else
+    { //cout << past->second << '\n';
+      return past->second;
+    }
+  }
+};
+
+template<typename network_t>
+double zero_indicator(const network_t&n)
+{ return 0;
+}
+
 // density of a graph is not found in the boost headers
 template<typename network_t>
 double density(const network_t &n)
 { typename network_t::vertices_size_type nv = num_vertices(n);
-  return double(num_edges(n)) / (nv*nv);
+  return double(num_edges(n)) / (nv*(nv-1));
+}
+
+template<typename ind_t, typename ref_t>
+class relative_indicator_t
+{ ind_t &ind;
+  ref_t &ref;
+public:
+  relative_indicator_t(ind_t&_ind,ref_t&_ref) : ind(_ind), ref(_ref)
+  {}
+  template<typename network_t>
+  double operator()(const network_t&n)
+  { return ind(n) / (double)ref(n);
+  }
+};
+
+template<typename ind_t, typename ref_t>
+relative_indicator_t<ind_t,ref_t>
+relative_indicator(ind_t&_i,ref_t&_r)
+{ return relative_indicator_t<ind_t,ref_t>(_i,_r);
+}
+
+class constant_indicator
+{ double c;
+public:
+  constant_indicator(double d) : c(d)
+  {}
+  template<typename network_t>
+  double operator()(const network_t&n)
+  { return c; } 
+};
+    
+// density_indicator(d) is an indicator that evaluates how close your
+//  network's density is to d.
+// i.e.
+// { density_indicator di(0.3);
+//   double ind = di(n);
+// }
+// or
+//  double ind = density_indicator(0.3)(n);
+class density_indicator
+{
+protected:
+  double target;
+public:
+  density_indicator(double _target) : target(_target) {}
+  template<typename network_t>
+  double operator()(const network_t&n) const
+  { return 1 - fabs(density(n)-target);
+  }
+};
+
+template<typename network_t>
+double central_point_dominance_ind(const network_t&n)
+{ typedef
+    map<typename graph_traits<network_t>::vertex_descriptor,double> map_t;
+  map_t cmap;
+  associative_property_map<map_t> centralitymap(cmap);
+  brandes_betweenness_centrality(n,centralitymap);
+  relative_betweenness_centrality(n,centralitymap);
+  return central_point_dominance(n,centralitymap);
+}
+
+//this is modeled after identity_property_map
+template<typename _key_t, typename _value_t>
+struct constant_property_map
+  : public put_get_helper<_value_t, constant_property_map<_key_t,_value_t> >
+{ typedef _key_t key_type;
+  typedef _value_t value_type;
+  typedef _key_t reference;
+  typedef boost::readable_property_map_tag category;
+  value_type value;
+  constant_property_map(value_type _v) : value(_v) {}
+  inline value_type operator[](const key_type& _t) const
+  { return value; }
+};
+
+// Given an unweighted directed graph, for the fixation process,
+// strictly each edge has weight such that all edges leaving a vertex
+// are equal and sum to 1.  You need to use these weights to compute
+// temperature of a vertex (sum of its in edge weights).  This thing
+// provides a 'weight property map' where one is needed, giving those
+// weights.
+template<typename network_t>
+class stochastic_edge_weight_map
+  : public put_get_helper<double,
+			  stochastic_edge_weight_map<network_t> >
+{
+public:
+  typedef typename graph_traits<network_t>::edge_descriptor key_type;
+  typedef double value_type;
+  typedef value_type reference;
+  typedef boost::readable_property_map_tag category;
+
+  const network_t&n;
+  stochastic_edge_weight_map(const network_t &_n) : n(_n) {}
+  inline value_type operator[](const key_type& e) const
+  { typename graph_traits<network_t>::vertex_descriptor
+      v = source(e,n);
+    typename graph_traits<network_t>::degree_size_type
+      outdeg = out_degree(v,n);
+    return 1.0/outdeg;
+  }
+};
+
+//#include <boost/numeric/ublas/matrix.hpp>
+#include <vnl/vnl_matrix.h>
+#include <boost/graph/floyd_warshall_shortest.hpp>
+template<typename network_t>
+vnl_matrix<int> shortest_paths_matrix_raw(const network_t&n)
+{ typename graph_traits<network_t>::vertices_size_type nv = num_vertices(n);
+  typedef vnl_matrix<int> matrix_t;
+  matrix_t distance_matrix(nv,nv);
+  typedef constant_property_map<
+    typename graph_traits<network_t>::edge_descriptor, int > wm_t;
+  wm_t weight_map(1);
+  floyd_warshall_all_pairs_shortest_paths(n,distance_matrix,
+					  boost::weight_map(weight_map));
+  return distance_matrix;
+}
+
+template<typename network_t>
+vnl_matrix<int> shortest_paths_matrix(const network_t&n)
+{ vnl_matrix<int> (*spmr)(const network_t&)
+    = &shortest_paths_matrix_raw<network_t>;
+  static deterministic_indicator_caching<network_t, vnl_matrix<int> >
+    shortest_paths_caching(spmr);
+  return shortest_paths_caching(n);
+}
+
+template<typename network_t>
+double diameter_ind(const network_t&n)
+{ vnl_matrix<int> distance_matrix = shortest_paths_matrix(n);
+  return distance_matrix.array_inf_norm();
+}
+
+template<typename network_t>
+double relative_diameter_ind(const network_t&n)
+{ double rd = diameter_ind(n) / (num_vertices(n) - 1);
+  return rd < 1 ? rd : 1;
+}
+
+template<typename network_t>
+double mean_path_length(const network_t&n)
+{ vnl_matrix<int> distance_matrix = shortest_paths_matrix(n);
+  double sum = 0;
+  for (int i = 0; i < distance_matrix.rows(); ++i)
+    for (int j = 0; j < distance_matrix.cols(); ++j)
+      if (i != j)
+	sum += distance_matrix(i,j);
+  typename graph_traits<network_t>::vertices_size_type nv = num_vertices(n);
+  double mpl = sum / (double)(nv*(nv-1));
+  return mpl;
+}
+
+template<typename network_t>
+double relative_mean_path_length(const network_t&n)
+{ double mpl = mean_path_length(n) / (num_vertices(n) - 1);
+  return mpl < 1 ? mpl : 1;
+}
+
+template<typename network_t>
+double mutuality_ind(const network_t&n)
+{ typename graph_traits<network_t>::edge_iterator ei,eend;
+  unsigned mut_count = 0; 
+  for(tie(ei,eend) = edges(n); ei != eend; ++ei)
+  { typename graph_traits<network_t>::edge_descriptor reverse;
+    bool found;
+    tie(reverse,found) = edge(target(*ei,n),source(*ei,n),n);
+    if (found)
+      ++mut_count;
+  }
+  return mut_count/(double)num_edges(n);
+}
+
+template<typename network_t>
+double transitivity_ind(const network_t&n)
+{ typename graph_traits<network_t>::edge_iterator e1i,e1end;
+  typename graph_traits<network_t>::out_edge_iterator e2i,e2end;
+  unsigned pair_count = 0, hypot_count = 0;
+  for (tie(e1i,e1end) = edges(n); e1i != e1end; ++e1i)
+    for (tie(e2i,e2end) = out_edges(target(*e1i,n),n); e2i != e2end; ++e2i)
+      if (target(*e2i,n) != source(*e1i,n))
+      { ++pair_count;
+        typename graph_traits<network_t>::edge_descriptor hypot;
+	bool found;
+	tie(hypot,found) = edge(target(*e2i,n),source(*e1i,n),n);
+	if (found)
+	  ++hypot_count;
+      }
+  return hypot_count / (double)pair_count;
+}
+
+template<typename network_t>
+double relative_mean_wavefront_ind(const network_t&n)
+{ return aver_wavefront(n) / (double)num_vertices(n);
+}
+
+// this gives the median of a range of sorted values.
+// it makes unstated assumptions about the iterator type.
+template<typename iterator_t>
+double median(iterator_t begin, unsigned n)
+{ for (unsigned i = 0; 2*i < n; ++i)
+    ++begin;
+  double med = *begin;
+  if (n % 2 == 1)
+    med = (med + *++begin)/2.0;
+  return med;
+}
+
+template<typename network_t>
+double median_out_density(const network_t&n)
+{ typedef multiset<typename network_t::degree_size_type> distrib_t;
+  distrib_t distrib; 
+  typename network_t::vertices_size_type nv = num_vertices(n);
+  typename graph_traits<network_t>::vertex_iterator vi,vend;
+  for(tie(vi,vend) = vertices(n); vi != vend; ++vi)
+    distrib.insert(out_degree(*vi,n));
+  unsigned sz = distrib.size();
+  typename distrib_t::iterator di = distrib.begin();
+  for (unsigned i = 0; 2*i < sz; ++i)
+    ++di;
+  double med = *di;
+  if (sz % 2 == 1)
+    med = (med + *++di)/2.0;
+  return med / nv;
+}
+
+template<typename network_t>
+double median_in_density(const network_t&n)
+{ typedef multiset<typename network_t::degree_size_type> distrib_t;
+  distrib_t distrib; 
+  typename network_t::vertices_size_type nv = num_vertices(n);
+  typename graph_traits<network_t>::vertex_iterator vi,vend;
+  for(tie(vi,vend) = vertices(n); vi != vend; ++vi)
+    distrib.insert(in_degree(*vi,n));
+  return median(distrib.begin(),distrib.size()) / nv;
+}
+
+// temperature of a vertex is sum_j w_ji
+template<typename network_t, typename WeightMap>
+double temperature(typename graph_traits<network_t>::vertex_descriptor v,
+		   const network_t&n, const WeightMap&w)
+{ typename graph_traits<network_t>::in_edge_iterator first, last;
+  double temp = 0; 
+  for(tie(first, last) = in_edges(v,n); first != last; first++)
+    temp += get(w,*first);
+  return temp;
+}
+
+template<typename network_t>
+double median_temperature(const network_t&n)
+{ stochastic_edge_weight_map<network_t> wm(n);
+  multiset<double> temps;
+  typename graph_traits<network_t>::vertex_iterator vi,vend;
+  for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
+    temps.insert(temperature(*vi,n,wm));
+  return median(temps.begin(),temps.size());
 }
 
 // an extension of the std::accumulate idea
@@ -88,73 +387,6 @@ choose_weighted(_Iterator first, _Iterator end, _Map &weights,
   return *end;
 }
 
-// density_indicator(d) is an indicator that evaluates how close your
-//  network's density is to d.
-// i.e.
-// { density_indicator di(0.3);
-//   double ind = di(n);
-// }
-// or
-//  double ind = density_indicator(0.3)(n);
-class density_indicator
-{
-protected:
-  double target;
-public:
-  density_indicator(double _target) : target(_target) {}
-  template<typename network_t>
-  double operator()(const network_t&n) const
-  { return 1 - fabs(density(n)-target);
-  }
-};
-
-#if 0
-// 2 fns used by is_fixation_candidate
-template<typename network_t, typename visited_t>
-void dfs(typename graph_traits<network_t>::vertex_descriptor v,
-		 visited_t &visited, const network_t&n)
-{ visited[v] = true;
-  typename graph_traits<network_t>::adjacency_iterator ni, nend;
-  for (tie(ni,nend) = adjacent_vertices; ni != nend; ++ni)
-    if (!visited[*ni])
-      reverse_dfs(*ni,visited,n);
-}
-
-template<typename network_t, typename visited_t>
-void reverse_dfs(typename graph_traits<network_t>::vertex_descriptor v,
-		 visited_t &visited, const network_t&n)
-{ visited[v] = true;
-  typename inv_adjacency_iterator_generator<network_t>::type ni, nend;
-  for (tie(ni,nend) = inv_adjacent_vertices; ni != nend; ++ni)
-    if (!visited[*ni])
-      reverse_dfs(*ni,visited,n);
-}
-
-// before doing fixation simulation call this to evaluate
-//  whether there's a possibility of nonzero fixation probability
-template<typename network_t>
-bool is_fixation_candidate(const network_t &n)
-{
-  typedef typename graph_traits<network_t>::vertex_descriptor vertex;
-  set<vertex> found_sources;
-  typename graph_traits<network_t>::vertex_iterator vi,vend;
-  // for each vertex, is it a part of an isolated or source component?
-  typedef vector<bool> visited_t;
-  visited_t visited(num_vertices(n));
-  for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
-  { visited.assign(false);
-    // mark all vertices that you can reach *vi FROM
-    reverse_dfs(*vi,visited,n);
-    for (visited_t::iterator vsi = visited.begin();
-	 vsi != visited.end(); ++vsi)
-      if (!*vsi)
-	;
-    ///???
-  }
-  
-}
-#endif//0
-
 // before doing fixation simulation call this to evaluate
 //  whether there's a possibility of nonzero fixation probability
 template<typename network_t>
@@ -175,7 +407,7 @@ bool is_fixation_candidate(const network_t &n)
       // and none out either, it's an isolated vertex, no fixation
       if (outi == outend)
 	return 0;
-      // if out edges only, a source, if more than one, no fixation
+      // if out edges only, a source, if more than one source no fixation
       else if (n_sources > 0)
 	return 0;
       else
@@ -186,12 +418,10 @@ bool is_fixation_candidate(const network_t &n)
   // check
 
   // first get the strongly connected components of the network.
-  typedef typename network_t::vertices_size_type valtype;
-  //map<typename graph_traits<network_t>::vertex_descriptor,valtype>
-  vector<valtype>
-    component_map;
+  typedef typename network_t::vertices_size_type comp_t;
+  vector<comp_t> component_map;
   component_map.resize(num_vertices(n));
-  valtype ncomponents = strong_components(n,component_map.data());
+  comp_t ncomponents = strong_components(n,component_map.data());
   if (ncomponents == 1)
     return true;
   // if there's more than one component with no in-edges,
@@ -199,19 +429,34 @@ bool is_fixation_candidate(const network_t &n)
   vector<bool> has_in_edges(ncomponents), has_out_edges(ncomponents);
   typename graph_traits<network_t>::edge_iterator ei,eend;
   for (tie(ei,eend) = edges(n); ei != eend; ++ei)
-  { has_in_edges[component_map[target(*ei,n)]] = true;
-    has_out_edges[component_map[source(*ei,n)]] = true;
+  { comp_t source_comp = component_map[source(*ei,n)],
+      target_comp = component_map[target(*ei,n)];
+    if (source_comp != target_comp)
+    { has_in_edges[target_comp] = true;
+      has_out_edges[source_comp] = true;
+    }
   }
   bool found_source_component = false;
   for(int i = 0; i < ncomponents; ++i)
     if (!has_in_edges[i])
     { if (!has_out_edges[i])
-        return false;
+        return false; // isolated component - no fixation
       else if (found_source_component)
-	return false;
+	return false; // multiple source components - no fixation
       else
 	found_source_component = true;
     }
+//   if (print_stuff)
+//   {
+//     cout << "has multiple components but passes fixation test...\n"
+// 	 << "has_in_edges: ";
+//     for(int i=0; i<ncomponents; ++i)
+//       cout << has_in_edges[i]? 1:0;
+//     cout << "\nhas_out_edges: ";
+//     for(int i=0; i<ncomponents; ++i)
+//       cout << has_out_edges[i]? 1:0;
+//     cout << endl;
+//   }
   return true;
 }
 
@@ -398,231 +643,80 @@ protected:
   typename graph_traits<network_t>::vertex_descriptor origin;
 };
 
-// this is supposed to give the same as selection_indicator, but by
-// calculating the fixation probability, not by monte carlo sampling.
-//
-// the theory: let s be a state of the network, i.e. a set of vertices
-// that are infected by the mutant type, and P(s) be probability of
-// reaching fixation of the mutant type from state s.  Then
-//   P(s) = sum_t p(transition from s to t) P(t);
-// or P(s) = sum_t m_st P(t),
-// with P(empty state) = 0, P(full state) = 1; rewrite as
-// sum_t n_st = sum_t (delta_st - m_st) P(t) = 0 for all s not empty or
-// full;  then n P = v, with v a vector of zeros except 1 in the full
-// state's row.  Solve.
-// Fixation probability given a single random starting vertex is done by
-// averaging those states' P.
-//#include <boost/numeric/ublas/matrix_sparse.hpp>
-#include "vnl/vnl_sparse_matrix_linear_system.h"
-#include "vnl/algo/vnl_lsqr.h"
+// analytic fixation probability indicators are in here
+#include "matrix-math.h"
 
-// used to go recursively through all subsets of the vertex set,
-// i.e. through all possible graph states, and apply the visitor
-// operator to each state.
-template<typename element_t, typename visit_f>
-void traverse_sets(set<element_t> &given, set<element_t> &draw_from,
-		   visit_f &visitor)
-{//  cout << "traverse: ";
-//   copy(given.begin(), given.end(), ostream_iterator<element_t>(cout));
-//   cout << " | ";
-//   copy(draw_from.begin(), draw_from.end(), ostream_iterator<element_t>(cout));
-//   cout << endl;
-  if (draw_from.empty())
-    visitor(given);
-  else
-  { typename set<element_t>::iterator ii = draw_from.begin();
-    element_t i = *ii;
-    draw_from.erase(ii);
-    ii = given.insert(given.end(),i);
-    traverse_sets(given,draw_from,visitor);
-    given.erase(ii);
-    traverse_sets(given,draw_from,visitor);
-    draw_from.insert(draw_from.begin(),i);
-  }
-}
-
-template<typename int_t>
-unsigned long two_to_the(const int_t &i)
-{ return 1ul << i; } 
-
-template<typename T>
-string asString(vnl_sparse_matrix<T> &m)
-{
-  ostringstream os;
-  m.reset();
-  while (m.next())
-  { os << '(' << m.getrow() << ',' << m.getcolumn() << ": "
-       << m.value() << ")\n";
-  }
-  return os.str();
-}
-
-template<typename network_t>
-class analytic_selection_indicator
-{
-protected:
-
-  typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
-
-  // this is a visitor operation for traverse_sets (see above): for
-  // each state s, put all the terms m_st into the matrix.
-  template<typename matrix_t>
-  class construct_n_visitor
-  {
-    const network_t &network;
-    matrix_t &n;
-  public:
-    construct_n_visitor(const network_t &_network, matrix_t &_n)
-      : network(_network), n(_n) {}
-    
-    void operator()(set<vertex_t> &state)
-    { // don't do the first + last rows
-      if (state.size() == 0 || state.size() == num_vertices(network))
-        return;
-      // this mapping of state to unique index only works if vertex_t
-      // is an integral type
-      unsigned long
-	state_index = accumulate_transformed(state.begin(),state.end(),
-					     0,two_to_the<vertex_t>);
-//       if (print_stuff)
-// 	cout << '{' << state_index << "}\n";
-      double R = num_vertices(network)*residentFitness
-  	           + state.size()*(mutantFitness-residentFitness);
-      // every edge j -> i contributes to either n_s,s-i, n_ss or
-      // n_s,s+i
-      typename graph_traits<network_t>::edge_iterator ei,eend;
-      for(tie(ei,eend) = edges(network); ei != eend; ++ei)
-      { // could maybe optimize this if edges sorted by source?
-        vertex_t j = source(*ei,network), i = target(*ei,network);
-	typename network_t::degree_size_type 
-	  outdeg_j = out_degree(j,network);
-        if (state.count(j))
-	{ if (state.count(i))
-	    n(state_index,state_index) -= mutantFitness / (R*outdeg_j);
-	  else
-	    n(state_index,state_index + two_to_the(i))
-	      -= mutantFitness / (R*outdeg_j);
-	}
-	else
-	{ if (state.count(i))
-	    n(state_index,state_index - two_to_the(i))
-	      -= residentFitness / (R*outdeg_j);
-  	  else
-	    n(state_index,state_index) -= residentFitness / (R*outdeg_j);
-	}
-      }
-      // correction for isolated vertices: when parent has no out
-      // edges, no change of state
-      typename graph_traits<network_t>::vertex_iterator vi,vend;
-      for(tie(vi,vend) = vertices(network); vi != vend; ++vi)
-	if (out_degree(*vi,network) == 0)
-	{ double fitness = state.count(*vi) ? mutantFitness:residentFitness;
-	  n(state_index,state_index) -= fitness / R;
-	}
-      // the sum of those contributions from all edges + isolated
-      // nodes makes 1 (per state)
-      // so the row sums of n should all be 0 (except 1 for the first
-      // and last)
-    }
-  };
-
-  // store the matrix and vector used in the calculation
-  // use sparse matrix?? not sure
-  // for now
-//   typedef boost::numeric::ublas::mapped_matrix<double> matrix_t;
-//   matrix_t n;
-//   boost::numeric::ublas::mapped_vector<double> v;
-  // trouble with boost (solver is missing)
-  // using vnl for now
-  typedef vnl_sparse_matrix<double> matrix_t;
-  matrix_t n;
-  vnl_vector<double> v, P;
+// template<typename network_t, typename RNG_t>
+// class comparing_indicator
+// {
+//   selection_indicator<network_t,RNG_t> si;
+//   analytic_selection_indicator<network_t> ai;
+// public:
+//   comparing_indicator(RNG_t&rng)
+//     : si(rng), ai() {}
   
-public:
-  void calculate(const network_t &network)
-  { typename network_t::vertices_size_type nv = num_vertices(network);
-    // caution with sizeable networks!  big matrix!!
-    int n_states = two_to_the(nv);
-    n = matrix_t(n_states,n_states); // resize and clear
-    v = vnl_vector<double>(n_states,0);
-
-    // v is easy: just one entry at the end.
-    v[n_states-1] = 1;
-
-    // n is like I said above, I - m.
-
-    // don't know if just assigning to an identity matrix would mess
-    // up the sparseness
-    for (int i = 0; i < n_states; ++i)
-      n(i,i) = 1;
-    
-    //  m_st = / if t = s+{i}  sum_{j in s, j -> i} r / (R outdegree(j))
-    //         | if t = s      sum_{j -> i, i,j same state} f(j)/(R outdeg(j))
-    //         \ if t = s-{i}  sum_{j in \s, j -> i} 1 / (R outdeg(j))
-    //   with f(j) = r if j infected, 1 if not;
-    //   R = sum_{vertices i} f(i)
-    // so for each s we need to account for every edge once.
-    // this is done by visiting all the states recursively.
-    // the visitor iterates through the edges to assemble the above terms.
-    construct_n_visitor<matrix_t> visitor(network,n);
-    typename graph_traits<network_t>::vertex_iterator vi,vend;
-    tie(vi,vend) = vertices(network);
-    set<vertex_t> addto, takefrom(vi,vend);
-    traverse_sets(addto,takefrom,visitor);
-    //traverse_sets(set<vertex_t>(),set<vertex_t>(vi,vend),visitor);
-    
-    // now n and v are assembled, find the answer!
-    //solve(n, v, unknown_storage_tag);
-    vnl_sparse_matrix_linear_system<double> system(n, v);
-    P = vnl_vector<double>(n_states,0);
-    // doesn't seem to do the right thing
-    //solver.multiply(v,P);
-    vnl_lsqr solver(system);
-    solver.minimize(P);
+//   double operator()(const network_t&network)
+//   { double sv = si(network);
+//     double av = ai(network);
 //     if (print_stuff)
-//     { print_network(network);
-//       cout << asString(n) << '\n' << v << '\n' << P << endl;
-//     }
-    // if (print_stuff)
-    //  solver.diagnose_outcome(cout);
-  }
-  double operator()(const network_t &network)
-  { // do simple graph criteria, in case of zero
-    if (!is_fixation_candidate(network))
-      return 0;
-    // if not, do the full matrix operation
-    calculate(network);
-    // return mean prob of fixation across singleton states
-    typename network_t::vertices_size_type nv = num_vertices(network);
-    typename graph_traits<network_t>::vertex_iterator vi,vend;
-    double prob = 0;
-    for(tie(vi,vend) = vertices(network); vi != vend; ++vi)
-    { // the index of a given state is sum_{i in s} 2^i
-      unsigned long index = two_to_the(*vi);
-      prob += P[index];
-    }
-    prob /= nv;
-    return prob;
-  }
-};
+//       cout << " [" << av << ' ' << sv << "]\n";
+// //  if (abs(sv - av) > 0.15)
+// //    av = ai(network);
+//     return av;
+//   }
+// };
 
-template<typename network_t, typename RNG_t>
+template<typename i0_t, typename i1_t>
 class comparing_indicator
 {
-  selection_indicator<network_t,RNG_t> si;
-  analytic_selection_indicator<network_t> ai;
+  i0_t &i0;
+  i1_t &i1;
 public:
-  comparing_indicator(RNG_t&rng)
-    : si(rng), ai() {}
-  
+  comparing_indicator(i0_t &_i0, i1_t &_i1)
+    : i0(_i0), i1(_i1) {}
+
+  template<typename network_t>
   double operator()(const network_t&network)
-  { double sv = si(network);
-    double av = ai(network);
+  { double v0 = i0(network);
+    double v1 = i1(network);
     if (print_stuff)
-      cout << " [" << av << ' ' << sv << "]\n";
-    return av;
+      cout << " [" << v0 << ' ' << v1 << "]\n";
+//  if (abs(sv - av) > 0.15)
+//    av = ai(network);
+    return v0;
   }
 };
+
+// template<typename network_t, typename RNG_t>
+// class selection_comparing_indicator
+//   : public comparing_indicator< analytic_selection_indicator<network_t>,
+// 				selection_indicator<network_t,RNG_t> >
+// {
+// public:
+//   selection_comparing_indicator(RNG_t&rng)
+//     : comparing_indicator< analytic_selection_indicator<network_t>,
+// 			   selection_indicator<network_t,RNG_t> >
+//        ( analytic_selection_indicator<network_t>(),
+// 	 selection_indicator<network_t,RNG_t>(rng) )
+//   {}
+// };
+
+// template<typename network_t, typename RNG_t>
+// class selection_comparing_indicator_fixed_origin
+//   : public comparing_indicator<
+//       analytic_selection_indicator_fixed_origin<network_t>,
+//       selection_indicator_fixed_origin<network_t,RNG_t> >
+// {
+// public:
+//   selection_comparing_indicator_fixed_origin(
+//     typename graph_traits<network_t>::vertex_descriptor v, RNG_t&rng)
+//     : comparing_indicator<
+//         analytic_selection_indicator_fixed_origin<network_t>,
+//         selection_indicator_fixed_origin<network_t,RNG_t> >
+//           ( analytic_selection_indicator_fixed_origin<network_t>(v),
+// 	    selection_indicator<network_t,RNG_t>(v,rng) )
+//   {}
+// };
 
 #include <boost/graph/graph_utility.hpp>
 // some trouble in this fn
@@ -644,6 +738,80 @@ inline bool is_connected(const VertexListGraph& g, VertexColorMap color)
   return true;
 }
 
+// given fixation probability of a given graph; assume it's actually
+// a point from a function of the form p = (1 - 1/r^K)/(1 - 1/r^KN) --
+// if true, K expresses how much the graph amplifies selection since
+// the Moran process corresponds to K=1.  So given p, r, and N, we solve
+// for K.
+#include <vnl/algo/vnl_rpoly_roots.h>
+#include <vnl/vnl_real_polynomial.h>
+#include <boost/lambda/lambda.hpp>
+template<typename prob_indicator_t>
+class probability_to_amplification
+{
+  prob_indicator_t *prob_indicator;
+public:
+  probability_to_amplification(prob_indicator_t*_i)
+    : prob_indicator(_i)
+  {}
+  probability_to_amplification() : prob_indicator(new prob_indicator_t)
+  {} 
+  // given fitness r, and prob. of fixation p; assuming
+  // the form p = (1 - 1/r^K) / (1 - 1/r^(K*N)),
+  // what is K?
+  // it becomes (a = r^K)
+  // (p - 1) a^N + a^(N-1) - p = 0,
+  // so solve for a...
+  template<typename network_t>
+  double operator()(const network_t&n)
+  { using namespace boost::lambda;
+    typename graph_traits<network_t>::vertices_size_type N
+      = num_vertices(n);
+    double p = (*prob_indicator)(n);
+    double r = mutantFitness;
+    double moran = (1 - 1/r) / (1 - 1/pow(r,12));
+    // reverse order: c[0] x^N + ... + c[N]
+    vnl_vector<double> poly_coeffs(N+1,0);
+    poly_coeffs[0] = p-1;
+    poly_coeffs[1] = 1;
+    poly_coeffs[N] = -p;
+    vnl_real_polynomial P(poly_coeffs);
+    vnl_rpoly_roots roots(P);
+    vnl_vector<double> realroots(roots.realroots());
+    set<double> answers;
+    for(int i = 0; i < realroots.size(); ++i)
+    { double a = realroots[i];
+//       if (print_stuff)
+//         cout << "P(" << a << ") = "
+// 	     << P.evaluate(a) << endl
+// 	     << "(1 - 1/a)/(1 - 1/a^" << N << ") = "
+// 	     << (1 - 1/a)/(1 - 1/pow(a,(int)N)) << endl;
+      if(a >= 0 && abs(a - 1) > 1e-5)
+	answers.insert(a);
+    }
+    switch (answers.size())
+    {
+    case 0:
+      answers.insert(1);
+      break;
+    case 1:
+      break; // all well
+    default:
+      cerr << answers.size() << " roots!";
+      for (set<double>::iterator ai = answers.begin(); ai != answers.end();
+	   ++ai)
+	cerr << ' ' << *ai;
+      cerr << endl;
+      break;
+    }
+    double a = *answers.rbegin();
+    return log(a) / log(mutantFitness);
+  }
+};
+
+// indicator for selecting bad graph structures --
+// generally just inverts the selection probability but also selects
+// against graphs that can't fixate at all for most starting nodes.
 template<typename network_t>
 class bad_at_selection_but_strongly_connected_indicator :
   public analytic_selection_indicator<network_t>
@@ -660,3 +828,4 @@ public:
   }
 };
 
+#endif //__indicators_h__

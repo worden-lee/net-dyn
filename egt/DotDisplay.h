@@ -33,9 +33,8 @@ public:
 
   virtual string title(void)
   { return "Community Graph"; }
-  virtual string outdir() = 0;
   virtual string dotdir()
-  { return outdir()+"/dot"; }
+  { return outdir(); }
   virtual string filebasename(void)
   { return dotdir()+"/graph"; }
   virtual string graphfile(void)
@@ -44,8 +43,8 @@ public:
   { return filebasename()+".eps"; }
   
   //void _update(void);
-  void recordFile();
-  void updateDisplay(void);
+//   void recordFile(double t);
+//   void updateDisplay(double t);
 };
 
 class DotDisplay: public Display
@@ -64,10 +63,10 @@ public:
   {
     (void)mkdir(xs->dotdir().c_str(),S_IRWXU|S_IRWXG|S_IRWXO);
     //if(displayEvery>0)
-      updateDisplay();
+    //  updateDisplay(0);
   }
 
-  void recordFile()
+  void recordFile(double t)
   {
     graphfile = xs->dotdir()+'/'+xs->graphfile();
     os.open(graphfile.c_str());
@@ -144,7 +143,7 @@ public:
     }
   }
 
-  void updateDisplay(void)
+  void updateDisplay(double t)
   {
     if (wrote)
     {

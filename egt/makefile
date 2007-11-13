@@ -1,10 +1,13 @@
 VXLDIR = ../vxl
-CFLAGS=-O3 -g -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl
-LDFLAGS=-L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib
+ESTRDIR = ../libexecstream
+CFLAGS=-g -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(ESTRDIR)
+LDFLAGS=$(ESTRDIR)/exec-stream.o -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
+
+#CFLAGS+=-O3
 
 default: network-optimize
 
-NOSRC = network-optimize.cpp DotDisplay.cpp
+NOSRC = network-optimize.cpp DotDisplay.cpp TimeSeriesDisplay.cpp
 NOOBJ = $(NOSRC:.cpp=.o)
 
 # %.o : %.cpp
@@ -28,5 +31,12 @@ network-optimize : $(NOOBJ)
 clean:
 	$(RM) *.o *~ *#
 
+clear:
+	$(RM) -r out
+
 %.eps : %.dot
+	neato -Goverlap=scale -Gsplines=true -Tps -o $@ $<
+
+# when network.dot is changed to network~2~
+%~.eps : %~
 	neato -Goverlap=scale -Gsplines=true -Tps -o $@ $<

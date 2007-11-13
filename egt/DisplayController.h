@@ -2,6 +2,8 @@
 #ifndef DISPLAYCONTROLLER_H
 #define DISPLAYCONTROLLER_H
 #include <math.h>
+#include <string>
+using std::string;
 
 template<class DISPLAY>
 class DisplayController// : public OutputController
@@ -33,20 +35,24 @@ public:
   void period(int period)
   { displayEvery = recordEvery = period; }
   
+  virtual string outdir()
+  { return "."; }
+
   virtual void flush(void)
   { if (display) display->flush();
   }
+
   virtual void finish(void) {}
 
-  virtual void updateDisplay(void)
+  virtual void updateDisplay(double t)
   { if (!display)
       createDisplay();
-    display->updateDisplay();
+    display->updateDisplay(t);
   }
-  virtual void recordFile(void)
+  virtual void recordFile(double t)
   { if (!display)
       createDisplay();
-    display->recordFile();
+    display->recordFile(t);
   }
 
   virtual void update(double t)
@@ -55,12 +61,12 @@ public:
       createDisplay();
     if (recordEvery > 0 && recordCounter+recordEvery <= t)
     {
-      recordFile();
+      recordFile(t);
       recordCounter = t;
     }
     if (displayEvery > 0 && displayCounter+displayEvery <= t)
     {
-      updateDisplay();
+      updateDisplay(t);
       displayCounter = t;
     }
   }
