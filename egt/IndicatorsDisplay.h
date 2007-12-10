@@ -1,6 +1,7 @@
+//  -*- C++ -*-
 #include "TimeSeriesDisplay.h"
 #include "CSVController.h"
-#include "indicators.h"
+//#include "indicators.h"
 
 // an indicator is anything that has a double operator()
 // could be a class or a function pointer
@@ -22,15 +23,19 @@ public:
   { return (*inside)(subject); } 
 };
 
+static unsigned idc_serial_counter = 0;
+
 template<typename subject_t>
 class IndicatorsDisplayController : public TimeSeriesController<int>
 {
   vector< indicatorholder_base<subject_t>* > indicators;
   vector<string> names;
   CSVDisplay *csvdisplay;
+  unsigned serial;
 public:
   IndicatorsDisplayController(double displayPeriod, double wind=HUGE)
-    : TimeSeriesController<int>(displayPeriod,0,wind)
+    : TimeSeriesController<int>(displayPeriod,-1,wind),
+      csvdisplay(0), serial(idc_serial_counter++)
   {} 
   template<typename indic_t>  
   void installIndicator(indic_t*i,string name)
@@ -44,9 +49,9 @@ public:
   void installIndicator(indic_t&i,string name)
   { installIndicator(&i,name);
   }
-  // install a copy if its a temporary object, best to avoid
+  // install a copy if it's a temporary object, best to avoid
   template<typename indic_t>
-  void installIndicator(indic_t i,string name)
+  void installIndicator(const indic_t&i,string name)
   { installIndicator(new indic_t(i),name);
   }
   
@@ -54,7 +59,9 @@ public:
   { return "out";
   }
   string filenamebase(void)
-  { return "indicators";
+  { ostringstream oss;
+    oss << "indicators-" << serial;
+    return oss.str();
   }
   int color(int k)
   { return k+1;
@@ -62,7 +69,8 @@ public:
   void recordFile(double t) // shouldn't be called
   { cerr << "wrong IndicatorsDisplay::recordFile" << endl; }
   void recordFile(double t, const subject_t&subject)
-  { for (int i = 0; i < indicators.size(); ++i)
+  { *csvdisplay << t;
+    for (int i = 0; i < indicators.size(); ++i)
     { double ind_i = (*indicators[i])(subject);
       display->record(i, t, ind_i);
       *csvdisplay << ind_i;
@@ -85,6 +93,7 @@ public:
     { display = new TimeSeriesDisplay<int>(this);
       display->initialize();
     }
+    // memory leak here
     if (!csvdisplay)
     { csvdisplay = new CSVDisplay(outdir()+'/'+filenamebase()+".csv");
     }

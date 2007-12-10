@@ -1,3 +1,7 @@
+// -*- C++ -*-
+#ifndef __network_optimize_h__
+#define __network_optimize_h__
+
 #include <boost/random.hpp>
 
 // ------ parameters for experiment -------
@@ -10,13 +14,14 @@ bool print_stuff = true;
 //  --- for the main function
 
 // start with a random graph with this many vertices and edges
-int init_n_vertices = 15;//12;//3;//16;
+int init_n_vertices = 13;//5;//12;//15
 double init_density = 0;
 
 //  --- for the optimizer
 
 // to control whether it displays the graphs while optimizing
 bool animate_optimization = true;//false;
+#define DISPLAY 1
 
 // whether the 'fitness' needs to be evaluated multiple times
 // simpler if not
@@ -35,6 +40,7 @@ int trialsForLocalOptimum = indicator_is_stochastic ? 200 : 1;//10;
 // if true, the contact process is:
 //   choose a parent weighted by fitness
 //   choose a child among the parent's out-neighbors, weighed by edge weight
+//   (this is the evolutionary graph theory process)
 // if false, instead it's:
 //   choose a child at random
 //   choose a parent among the child's in-neighbors, weighted by
@@ -60,6 +66,10 @@ int timesToTestFixation = 300;
 
 // if no fixation after this many reproduction events, quit trying
 int maxStepsToFixation = 1000;
+
+//  --- for the swarm process
+
+bool mobilityIncreasesWithFitness = true;
 
 // -----------------------------------------
 
@@ -97,3 +107,4 @@ extern rng_t rng;
 typedef boost::variate_generator<rng_t&, boost::uniform_int<> >  ui_t;
 typedef boost::variate_generator<rng_t&, boost::uniform_real<> > ur_t;
 
+#endif // __network_optimize_h__

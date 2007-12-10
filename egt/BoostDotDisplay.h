@@ -1,7 +1,8 @@
 #include "DotDisplay.h"
 #include <boost/graph/graphviz.hpp>
 #include "util.h"
-#include "indicators.h"
+#include "network-optimize.h"
+#include "indicators-network.h"
 using namespace boost;
 
 template<typename network_t>
@@ -230,7 +231,7 @@ public:
   {
     return filebase + ".dot";
   }
-  void update(double t, network_t &_n)
+  void update(double t, const network_t &_n)
   {
     n = &_n;
     filebase = stringf("%g",t);
@@ -249,7 +250,7 @@ public:
   }
 protected:
   string filebase;
-  network_t *n;
+  const network_t *n;
 };
 
 template<class network_t>

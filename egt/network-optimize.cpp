@@ -14,12 +14,15 @@
 #include <boost/random/uniform_int.hpp>
 #include <boost/random/uniform_real.hpp>
 #include <boost/graph/erdos_renyi_generator.hpp>
+#include <boost/graph/reverse_graph.hpp>
+#include <boost/lambda/lambda.hpp>
 #include <math.h>
 #include "BoostDotDisplay.h"
 #include "IndicatorsDisplay.h"
-#include "indicators.h"
+#include "indicators-network.h"
 
 using namespace boost;
+using namespace boost::lambda;
 using namespace std;
 
 rng_t rng;
@@ -43,12 +46,21 @@ struct custom_types
 template<typename network_t>
 void print_network(network_t &n)
 {
-  typename graph_traits<network_t>::vertex_iterator vi,vend;
-  for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
-  { typename graph_traits<network_t>::adjacency_iterator ai,aend;
-    cout << *vi << ":";
-    for (tie(ai,aend) = adjacent_vertices(*vi,n); ai != aend; ++ai)
-      cout << ' ' << *ai;
+  typename graph_traits<network_t>::vertex_iterator ii,iend,ji,jend;
+//   for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
+//   { typename graph_traits<network_t>::adjacency_iterator ai,aend;
+//     cout << *vi << ":";
+//     for (tie(ai,aend) = adjacent_vertices(*vi,n); ai != aend; ++ai)
+//       cout << ' ' << *ai;
+//     cout << endl;
+//   }
+  for (tie(ii,iend) = vertices(n); ii != iend; ++ii)
+  { for (tie(ji,jend) = vertices(n); ji != jend; ++ji)
+    { typename graph_traits<network_t>::edge_descriptor ed;
+      bool ed_found;
+      tie(ed,ed_found) = edge(*ii,*ji,n);
+      cout << (ed_found ? '1':'0') << ' ';
+    }
     cout << endl;
   }
 }
@@ -72,38 +84,9 @@ void toggle_edge(typename custom_types<network_t>::possible_edge ft,
 //   indicator is a function object that assigns a value to the network.
 // returns: void, but modifies n.
 template<typename network_t, typename indicator_t>
-void improveNetwork(network_t &n, indicator_t &indicator)
-{ static BoostDotGraphController<network_t>
-    opt_animation(animate_optimization?1:0, 1);
-
-  double moranprob =
-      (1 - 1/mutantFitness) /
-      (1 - 1/pow(mutantFitness,(double)init_n_vertices));
-    
-  static IndicatorsDisplayController<network_t>
-    ind_display(animate_optimization?1:0);
-  constant_indicator mind(moranprob);
-  ind_display.installIndicator(relative_indicator(indicator, mind),
-    "indicator");
-  //ind_display.installIndicator(indicator,"indicator");
-  ind_display.installIndicator(&density<network_t>,"density");
-  ind_display.installIndicator(&mutuality_ind<network_t>,"mutuality");
-  ind_display.installIndicator(&transitivity_ind<network_t>,"transitivity");
-  ind_display.installIndicator(&median_temperature<network_t>,
-			       "median temperature");
-  ind_display.installIndicator(&median_out_density<network_t>,
-			       "median out density");
-  ind_display.installIndicator(&median_in_density<network_t>,
-			       "median in density");
-  ind_display.installIndicator(&relative_diameter_ind<network_t>,
-			       "relative diameter");
-  ind_display.installIndicator(&relative_mean_path_length<network_t>,
-			       "relative mean path length");
-//   ind_display.installIndicator(&relative_mean_wavefront_ind<network_t>,
-// 			       "relative mean wavefront");
-  ind_display.installIndicator(
-    &central_point_dominance_ind<network_t>,"central point dominance");
-  
+void improveNetwork(network_t &n, indicator_t &indicator,
+                    DisplayFarm<network_t>*df=0)
+{
   int nSteps = 0; 
   int consecutiveTimesFoundLocalOptimum = 0;
   double currentIndicator;
@@ -127,6 +110,7 @@ void improveNetwork(network_t &n, indicator_t &indicator)
   
     bool foundImprovement = true;
     bool foundNeutralNeighbor = false;
+    bool nadd;
     typename custom_types<network_t>::possible_edge neutral_neighbor;
     int neutralSteps = 0;
     while(foundImprovement ||
@@ -135,8 +119,10 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 //     cout << "current network\n";
 //     print_network(n);
       //if (animate_optimization)
-      opt_animation.update(nSteps,n);
-      ind_display.update(nSteps,n);
+#ifdef DISPLAY
+      if(df)
+        df->update(nSteps,n);
+#endif//DISPLAY
       
       // shuffle the candidate edges.  this matters because the first
       //  one found that's an improvement will be used, or if none,
@@ -157,8 +143,8 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 	//toggle_edge(*ei,n);
         // see if the indicator is better
         double newIndicator = indicator(n);
-	if (print_stuff)
-	  cout << newIndicator << endl;
+// 	if (print_stuff)
+// 	  cout << newIndicator << endl;
 
 	// for stochastic indicators: if it's big, call it again
 	//  and make sure it's really big
@@ -168,8 +154,8 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 	    newIndicator >= currentIndicator)
 	  // && newIndicator > 0) // what's this for?
 	{ newIndicator = indicator(n);
-  	  if (print_stuff)
-	    cout << newIndicator << endl;
+//   	  if (print_stuff)
+// 	    cout << newIndicator << endl;
 	} 
 // 	cout << "toggle (" << ei->first << ',' << ei->second << "): "
 // 	     << newIndicator << endl;
@@ -178,6 +164,7 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 	    newIndicator <= currentIndicator + 1e-7)
 	{ if (!foundNeutralNeighbor)
   	  { neutral_neighbor = *ei;
+            nadd = !ed_found;
  	    foundNeutralNeighbor = true;
 	  }
 	}
@@ -188,7 +175,7 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 	  { cout << "found improvement " << (ed_found?'-':'+') << '('
 		 << ei->first << ',' << ei->second << "): "
 		 << currentIndicator << '\n';
-  	  //print_network(n);
+            print_network(n);
 	  }
 	  break;
 	}
@@ -206,14 +193,13 @@ void improveNetwork(network_t &n, indicator_t &indicator)
 	consecutiveTimesFoundLocalOptimum = 0;
       }
       else if (foundNeutralNeighbor && neutralSteps++ < maxNeutralSteps)
-      { if (print_stuff)
-  	  cout << "taking neutral step ("
+      { toggle_edge(neutral_neighbor,n);
+        if (print_stuff)
+  	{ cout << "taking neutral step " << (nadd?'+':'-') << '('
 	       << neutral_neighbor.first << ','
-	       << neutral_neighbor.second << ")\n";      
-        toggle_edge(neutral_neighbor,n);
-	if (print_stuff)
-	{ cout << "indicator: " << currentIndicator << '\n';
-	  //print_network(n);
+	       << neutral_neighbor.second << "): "
+               << currentIndicator << '\n';
+	  print_network(n);
 	}
         ++nSteps;
 	consecutiveTimesFoundLocalOptimum = 0;
@@ -229,9 +215,10 @@ void improveNetwork(network_t &n, indicator_t &indicator)
         cout << "at local optimum\n";
       ++consecutiveTimesFoundLocalOptimum;
     }
-    //if (animate_optimization)
-      opt_animation.update(nSteps,n);
-      ind_display.update(nSteps,n);
+#ifdef DISPLAY
+    if (df)
+      df->update(nSteps,n);
+#endif//DISPLAY
   }
   if (print_stuff)
     cout << "indicator: " << currentIndicator << '\n';
@@ -250,8 +237,11 @@ public:
   typedef typename graph_traits<graph_t>::vertices_size_type
     vertices_size_type;
 
+  typedef typename graph_traits<graph_t>::edge_descriptor edge_type;
+  typedef pair<vertices_size_type,vertices_size_type>     other_edge_type;
+
   typedef std::output_iterator_tag                    iterator_category;
-  typedef pair<vertices_size_type,vertices_size_type> value_type;
+  typedef edge_type                                   value_type;
   typedef void                                        difference_type;
   typedef void                                        pointer;
   typedef void                                        reference;
@@ -261,7 +251,11 @@ public:
   self_t &operator*() 
   { return *this;
   }
-  self_t &operator=(value_type e)
+  self_t &operator=(const edge_type &e)
+  { add_edge(source(e,graph),target(e,graph),graph);
+    return *this;
+  }
+  self_t &operator=(const other_edge_type &e)
   { add_edge(source(e,graph),target(e,graph),graph);
     return *this;
   }
@@ -340,17 +334,37 @@ main()
   default: // empty graph, I guess    
     break;
   }
+  if (false) // reverse all the edges
+  { graph_traits<network_t>::edge_iterator ei, eend;
+    tie(ei,eend) = edges(n);
+    typedef deque< graph_traits<network_t>::edge_descriptor > eq_t;
+    eq_t eq;
+    copy(ei,eend,back_inserter(eq));
+    n.clear();
+    // see <boost/lambda.h>
+//     typedef graph_traits<network_t>::edge_descriptor ed;
+//     transform(eq.begin(),eq.end(),edge_inserter(n),
+//               edge(target(ret<const ed&>(*_1),n),source(*_1,n),n));
+    while(!eq.empty())
+    { graph_traits<network_t>::edge_descriptor ed = eq.front(); eq.pop_front();
+      add_edge(target(ed,n),source(ed,n),n);
+    }
+    // does this work?
+    cout << "tried reversing edges:\n";
+    print_network(n);
+  }
   if (false) // perturb one edge
   { int v1 = random_vertex(n,rng), v2;
     do v2 = random_vertex(n,rng); while (v2 == v1);
     toggle_edge(make_pair(v1,v2),n);
   }
   
-  if (print_stuff)
-  { double moranprob =
+  double moranprob =
       (1 - 1/mutantFitness) /
       (1 - 1/pow(mutantFitness,(double)init_n_vertices));
-    cout << "moran probability = " << moranprob << '\n';
+   
+  if (print_stuff)
+  { cout << "moran probability = " << moranprob << '\n';
     cout << "initial random network\n";
     print_network(n);
     cout << "initial density: " << density(n) << endl;
@@ -360,7 +374,7 @@ main()
   //improveNetwork(n,density_indicator(0.3342847893));
 
 //   analytic_selection_indicator<network_t> aind;
-//   selection_indicator<network_t,rng_t> sind(rng);
+  network_selection_indicator<network_t,rng_t> sind(rng);
 //   analytic_selection_indicator_fixed_origin<network_t> aind(1);
 //   selection_indicator_fixed_origin<network_t,rng_t> sind(1,rng);
 
@@ -372,12 +386,66 @@ main()
 //    deterministic_indicator_caching<network_t,double,
 //      probability_to_amplification< analytic_selection_indicator<network_t> > >
 //        pind;
-   deterministic_indicator_caching<network_t,double,
-     analytic_selection_indicator<network_t> >
-       pind;
+  typedef deterministic_indicator_caching<network_t,double,
+    analytic_selection_indicator<network_t> > pind_t;
+  pind_t pind;
+   
+  constant_indicator mind(moranprob);
+
+//   relative_indicator_t<pind_t,constant_indicator> rind(pind,mind);
+//   relative_indicator_t< network_selection_indicator<network_t,rng_t>,
+//     constant_indicator > srind(sind,mind);
+
+  typedef comparing_indicator< pind_t,
+    network_selection_indicator<network_t,rng_t> >
+    cind_t;
+  cind_t cind(pind,sind);
+
+  relative_indicator_t<cind_t, constant_indicator> rind(cind,mind);
+
   //double(*ind)(const network_t&) = zero_indicator;
+
+  // here, declare which indicator we are to optimize
+  typeof(rind) &indicator(rind);
+
+#ifdef DISPLAY
+  DisplayFarm<network_t> displayfarm;
+  BoostDotGraphController<network_t>
+    opt_animation(animate_optimization?1:0, 1);
+  displayfarm.installController(opt_animation);
+
+  IndicatorsDisplayController<network_t>
+    ind_display(animate_optimization?1:0);
+  ind_display.installIndicator(indicator,"indicator");
+  ind_display.installIndicator(&density<network_t>,"density");
+  ind_display.installIndicator(&mutuality_ind<network_t>,"mutuality");
+  ind_display.installIndicator(&transitivity_ind<network_t>,"transitivity");
+  ind_display.installIndicator(&median_temperature<network_t>,
+			       "median temperature");
+  ind_display.installIndicator(&median_out_density<network_t>,
+			       "median out density");
+  ind_display.installIndicator(&median_in_density<network_t>,
+			       "median in density");
+  ind_display.installIndicator(&relative_diameter_ind<network_t>,
+			       "relative diameter");
+  ind_display.installIndicator(&relative_mean_path_length<network_t>,
+			       "relative mean path length");
+//   ind_display.installIndicator(&relative_mean_wavefront_ind<network_t>,
+// 			       "relative mean wavefront");
+  ind_display.installIndicator(
+    &central_point_dominance_ind<network_t>,"central point dominance");
+  displayfarm.installController(ind_display);
+
+  IndicatorsDisplayController<network_t>
+    mft_display(animate_optimization?1:0);
+  mean_fixation_time_indicator<typeof sind> mft_sind(sind);
+  mft_display.installIndicator(mft_sind,"mean fixation time");
+  displayfarm.installController(mft_display);
   
-  improveNetwork(n,pind);
+  improveNetwork(n,indicator,&displayfarm);
+#else
+  improveNetwork(n,indicator,0);
+#endif//DISPLAY
 
   if (print_stuff)
   { cout << "final network\n";
