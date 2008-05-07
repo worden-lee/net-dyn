@@ -1,6 +1,8 @@
 /* -*- C++ -*- */
 // created by Jesse Edelstein 2007
 // 9/2007 tweaked and adapted for network-optimize project by LW
+#ifndef _CSVDISPLAY_H_
+#define _CSVDISPLAY_H_
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -54,11 +56,11 @@ public:
 
   // Write a new datum -- should do comma insertion automagically
   // this should automatically handle other numericals
-  void operator<<(const double& data) { 
+  CSVDisplay& operator<<(const double& data) { 
     if (&data == 0 || data == HUGE) {
       // HUGE: the international code for "it's broken!"
       *this << string("NA");
-      return;
+      return *this;
     }
     if (!logfile) {
       cerr << "CSVDisplay::<< called, but no logfile is open!\n";
@@ -69,9 +71,10 @@ public:
       logfile << ",";
     }
     logfile << data;
+    return *this;
   }
 
-  void operator<<(const string data) {
+  CSVDisplay& operator<<(const string data) {
     if (!logfile) {
       cerr << "CSVDisplay::<< called, but no logfile is open!\n";
     }
@@ -81,6 +84,7 @@ public:
       logfile << ",";
     }
     logfile << data;
+    return *this;
   }
 
   // start a new row of data
@@ -101,8 +105,11 @@ public:
   }
 };
 
-class CSVController : public DisplayController<CSVDisplay>
+template<typename ParamsClass>
+class CSVController : public DisplayController<CSVDisplay,ParamsClass>
 {
+  typedef DisplayController<CSVDisplay,ParamsClass> superclass;
+  using superclass::display;
 public:
   // We're stretching the DisplayController spec a little, because
   // this class will control many CSVDisplay classes: one that is
@@ -114,23 +121,21 @@ public:
   //
   // Of course there is no displayPeriod needed, because the CSVs are
   // not displayed, only written to disk.
-  CSVController(double filePeriod)
-    : DisplayController<CSVDisplay>(HUGE,filePeriod)
-    {
-      // create the community logfile
-      createDisplay();
-      recordCounter = this->time();
-    }
+  CSVController()
+  { // create the community logfile
+    createDisplay();
+    superclass::recordCounter = this->time();
+  }
 
-  void createDisplay(){
-    mkdir(outdir().c_str(), S_IRWXU|S_IRWXG|S_IRWXO);
+  void createDisplay()
+  { mkdir(outdir().c_str(), S_IRWXU|S_IRWXG|S_IRWXO);
     string communityOutfile = outdir() + "/community-log.csv";
     display = new CSVDisplay(communityOutfile);
     display->writeLine("temp,eco_t,evo_t,n_equil,n_species,n_resources,dT/dmaxT");
   }
 
   string outdir(){
-    return "out/csv";
+    return ParamsClass::outputDirectory()+"/csv";
   }
   
   virtual double time() = 0;
@@ -153,10 +158,13 @@ public:
   {
 //     if (!display)
 //       createDisplay();
-    if (recordEvery > 0 && recordCounter+recordEvery <= t && t != 0)
-      {
-	// (record stuff...)
-	recordCounter = t;
-      }
+    double recordEvery = ParamsClass::recordEvery();
+    if (recordEvery > 0 && superclass::recordCounter+recordEvery <= t && t != 0)
+    {
+      // (record stuff...)
+      superclass::recordCounter = t;
+    }
   }
 };
+
+#endif//_CSVDISPLAY_H_

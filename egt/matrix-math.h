@@ -1,9 +1,13 @@
+/* -*- c++ -*- */
 #ifndef MATRIX_MATH_H
 #define MATRIX_MATH_H
+#include "indicators-network.h"
 //#include <boost/numeric/ublas/matrix_sparse.hpp>
+#include <boost/function.hpp>
 #include "vnl/vnl_sparse_matrix_linear_system.h"
 #include "vnl/algo/vnl_sparse_lu.h"
 #include "vnl/algo/vnl_lsqr.h"
+#include <math.h>
 
 // analytic calculations of fixation probability
 
@@ -55,7 +59,7 @@ void traverse_sets(set<element_t> &given, set<element_t> &draw_from,
 }
 
 // ==== first discrete-time markov process calculations ====
-// skip ahead for continuous time version which is probably better
+// skip ahead for continuous time version which is better
 
 // the theory: let s be a state of the network, i.e. a set of vertices
 // that are infected by the mutant type, and P(s) be probability of
@@ -63,9 +67,9 @@ void traverse_sets(set<element_t> &given, set<element_t> &draw_from,
 //   P(s) = sum_t p(transition from s to t) P(t);
 // or P(s) = sum_t m_st P(t),
 // with P(empty state) = 0, P(full state) = 1; rewrite as
-// sum_t n_st = sum_t (delta_st - m_st) P(t) = 0 for all s not empty or
-// full;  then n P = v, with v a vector of zeros except 1 in the full
-// state's row.  Solve.
+// sum_t n_st P(t) = sum_t (delta_st - m_st) P(t) = 0 for all s not 
+// empty or full;  then n P = v, with v a vector of zeros except 1 in
+// the full state's row.  Solve.
 // Fixation probability given a single random starting vertex is done by
 // averaging those states' P.
 
@@ -89,9 +93,11 @@ class construct_n_visitor_by_parent
 {
   const network_t &network;
   matrix_t &n;
- public:
-  construct_n_visitor_by_parent(const network_t &_network, matrix_t &_n)
-    : network(_network), n(_n) {}
+  double residentFitness, mutantFitness;
+public:
+  construct_n_visitor_by_parent(const network_t &_network, matrix_t &_n,
+                                double rf, double mf)
+    : network(_network), n(_n), residentFitness(rf), mutantFitness(mf) {}
 
   typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
   
@@ -111,6 +117,7 @@ class construct_n_visitor_by_parent
       // every edge j -> i contributes to either n_s,s-i, n_ss or
       // n_s,s+i
       typename graph_traits<network_t>::edge_iterator ei,eend;
+      // bug here! @@ won't work right for undirected graphs
       for(tie(ei,eend) = edges(network); ei != eend; ++ei)
       { // could maybe optimize this if edges sorted by source?
         vertex_t j = source(*ei,network), i = target(*ei,network);
@@ -157,16 +164,19 @@ class construct_n_visitor_by_parent
 //  for each vertex, account for each of its in-edges.
 // the matrix to be constructed is n = 1 - m.
 // first the matrix is set to an identity matrix; then
-// the visitor iterates through the edges to sutract the above terms.
-unsigned long watch_state = -1;
+// the visitor iterates through the edges to subtract the above terms.
+//unsigned long watch_state = -1;
+long watch_state = -1;
 template<typename network_t, typename matrix_t>
 class construct_n_visitor_by_child
 {
   const network_t &network;
   matrix_t &n;
+  double residentFitness, mutantFitness;
 public:
-  construct_n_visitor_by_child(const network_t &_network, matrix_t &_n)
-    : network(_network), n(_n) {}
+  construct_n_visitor_by_child(const network_t &_network, matrix_t &_n,
+                               double rf, double mf)
+    : network(_network), n(_n), residentFitness(rf), mutantFitness(mf) {}
     
   typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
 
@@ -182,7 +192,7 @@ public:
 					   0,two_to_the<vertex_t>);
 
 #define DO(nn,s0,s1) \
-if (print_stuff && state_index == watch_state) \
+if (state_index == watch_state)        \
 { cout << #nn "(" << s0 << ',' << s1 \
        << ") = " << nn(s0,s1) << '\n'; \
 }
@@ -241,19 +251,32 @@ if (print_stuff && state_index == watch_state) \
 
 // ==== now the calculations in continuous time using generator matrix ====
 
-template<typename network_t, typename matrix_t>
+template<typename network_t, typename matrix_t,
+  typename res_fitness_map_t, typename mut_fitness_map_t>
 class construct_generator_visitor
 {
 protected:
   const network_t &network;
   matrix_t &G;
+  //double residentFitness, mutantFitness;
+  // these things must have double operator()(vertex_t)
+  res_fitness_map_t res_fitness_map;
+  mut_fitness_map_t mut_fitness_map;
+  bool choose_parent_first;
 
   typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
   
 public:
-  construct_generator_visitor(const network_t &_network, matrix_t &_G)
-    : network(_network), G(_G) {}
-    
+  template<typename params_t>
+  construct_generator_visitor(const network_t &_network, matrix_t &_G,
+                              res_fitness_map_t &_rfm, mut_fitness_map_t &_mfm,
+                              params_t*p)
+    : network(_network), G(_G),
+/*       residentFitness(p->residentFitness()), */
+/*       mutantFitness(p->mutantFitness()), */
+      res_fitness_map(_rfm), mut_fitness_map(_mfm),
+      choose_parent_first(p->choose_parent_first()) {}
+
   // () called once for each state: construct that state's row in the
   // matrix, all rates and the diagonal term.
   void operator()(set<vertex_t> &state)
@@ -261,25 +284,28 @@ public:
       = accumulate_transformed(state.begin(), state.end(),
 			       0, two_to_the<vertex_t>);
     double v = 0.0;
-    typename graph_traits<network_t>::edge_iterator ei, eend;
-    for (tie(ei,eend) = edges(network); ei != eend; ++ei)
-    { bool source_infected = (state.count(source(*ei,network)) > 0);
-      bool target_infected = (state.count(target(*ei,network)) > 0);
-      if (source_infected && !target_infected)
-      { double rij = r(*ei,state);
-        if (rij != 0.0)
-	{ G(state_index, state_index + two_to_the(target(*ei,network)))
-	    += rij;
-  	  v += rij;
-	}
-      }
-      else if (!source_infected && target_infected)
-      { double rij = r(*ei,state);
-        if (rij != 0.0)
-	{ G(state_index, state_index - two_to_the(target(*ei,network)))
-	    += rij;
-  	  v += rij;
-	}
+    typename graph_traits<network_t>::vertex_iterator si,send;
+    for (tie(si,send) = vertices(network); si != send; ++si)
+    { bool source_infected = (state.count(*si) > 0);
+      typename graph_traits<network_t>::out_edge_iterator ei,eend;
+      for (tie(ei,eend) = out_edges(*si,network); ei != eend; ++ei)
+      { bool target_infected = (state.count(target(*ei,network)) > 0);
+        if (source_infected && !target_infected)
+        { double rij = r(*ei,state);
+          if (rij != 0.0)
+          { G(state_index, state_index + two_to_the(target(*ei,network)))
+              += rij;
+            v += rij;
+          }
+        }
+        else if (!source_infected && target_infected)
+        { double rij = r(*ei,state);
+          if (rij != 0.0)
+          { G(state_index, state_index - two_to_the(target(*ei,network)))
+              += rij;
+            v += rij;
+          }
+        }
       }
     }
     if (v != 0.0)
@@ -292,35 +318,32 @@ public:
     else
       return by_child_edge_rate(e,network,s);
   }
+  // a state is a set recording which nodes have mutant fitness
+  double node_fitness(vertex_t i, set<vertex_t> &state)
+  { return //(state.count(i) > 0) ? mutantFitness : residentFitness;
+      (state.count(i) > 0) ? mut_fitness_map(i) : res_fitness_map(i);
+  }
+  // this is the rate of the 'exponential clock' attached to edge e
+  // for parent-first process: rate(i->j) = f(i)/outdegree(i)
+  double by_parent_edge_rate(
+           typename graph_traits<network_t>::edge_descriptor e,
+           const network_t &n, set<vertex_t> &s)
+  { double fi = node_fitness(source(e,n),s);
+    return fi / out_degree(source(e,n),n);
+  }
+  // for child-first process: rate(i->j) = f(i)/sum_{k->j}f(k)
+  double by_child_edge_rate(
+           typename graph_traits<network_t>::edge_descriptor e,
+           const network_t &n, set<vertex_t> &s)
+  { double fi = node_fitness(source(e,n),s);
+    double total_in_fitness = 0;
+    typename inv_adjacency_iterator_generator<network_t>::type ki, kend;
+    for(tie(ki,kend) = inv_adjacent_vertices(target(e,n),n);
+        ki != kend; ++ki)
+      total_in_fitness += node_fitness(*ki,s);
+    return fi / total_in_fitness;
+  }
 };
-
-// a state is a set recording which nodes have mutant fitness
-template<typename node_t, typename state_t>
-double node_fitness(node_t i, state_t &state)
-{ return (state.count(i) > 0) ? mutantFitness : residentFitness;
-}
-
-// this is the rate of the 'exponential clock' attached to edge e
-// for parent-first process: rate(i->j) = f(i)/outdegree(i)
-template<typename network_t, typename state_t>
-double by_parent_edge_rate(typename graph_traits<network_t>::edge_descriptor e,
-			   network_t &n, state_t &s)
-{ double fi = node_fitness(source(e,n),s);
-  return fi / out_degree(source(e,n),n);
-}
-
-// for child-first process: rate(i->j) = f(i)/sum_{k->j}f(k)
-template<typename network_t, typename state_t>
-double by_child_edge_rate(typename graph_traits<network_t>::edge_descriptor e,
-			  const network_t &n, state_t &s)
-{ double fi = node_fitness(source(e,n),s);
-  double total_in_fitness = 0;
-  typename inv_adjacency_iterator_generator<network_t>::type ki, kend;
-  for(tie(ki,kend) = inv_adjacent_vertices(target(e,n),n);
-      ki != kend; ++ki)
-    total_in_fitness += node_fitness(*ki,s);
-  return fi / total_in_fitness;
-}
 
 // ==== before we get to the indicator classes, we need a function
 //      that vnl_sparse_matrix, for some reason, doesn't provide :-) ====
@@ -392,105 +415,139 @@ public:
 
 // ==== now the indicator classes that use the above ====
 
-template<typename network_t>
-class analytic_selection_indicator_discrete
-{
-protected:
+// template<typename network_t, typename pc>
+// class analytic_selection_indicator_discrete : ObjectWithParameters<pc>
+// {
+// protected:
+//   using ObjectWithParameters<pc>::parameters;
 
-  typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
+//   typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
 
-  // store the matrix and vector used in the calculation
-  // use sparse matrix?? not sure
-  // for now
-//   typedef boost::numeric::ublas::mapped_matrix<double> matrix_t;
+//   // store the matrix and vector used in the calculation
+//   // use sparse matrix
+// //   typedef boost::numeric::ublas::mapped_matrix<double> matrix_t;
+// //   matrix_t n;
+// //   boost::numeric::ublas::mapped_vector<double> v;
+//   // trouble with boost (solver is missing)
+//   // using vnl for now
+//   typedef vnl_sparse_matrix<double> matrix_t;
 //   matrix_t n;
-//   boost::numeric::ublas::mapped_vector<double> v;
-  // trouble with boost (solver is missing)
-  // using vnl for now
-  typedef vnl_sparse_matrix<double> matrix_t;
-  matrix_t n;
-  vnl_vector<double> v, P;
+//   vnl_vector<double> v, P;
   
-public:
-  void calculate(const network_t &network)
-  { typename network_t::vertices_size_type nv = num_vertices(network);
-    // caution with sizeable networks!  big matrix!!
-    unsigned long n_states = two_to_the(nv);
-    n = matrix_t(n_states,n_states); // resize and clear
-    v = vnl_vector<double>(n_states,0);
+// public:
+//   analytic_selection_indicator_discrete(pc*p) : ObjectWithParameters<pc>(p) {}
 
-    // v is easy: just one entry at the end.
-    v[n_states-1] = 1;
+//   void calculate(const network_t &network)
+//   { typename network_t::vertices_size_type nv = num_vertices(network);
+//     // caution with sizeable networks!  big matrix!!
+//     unsigned long n_states = two_to_the(nv);
+//     n = matrix_t(n_states,n_states); // resize and clear
+//     v = vnl_vector<double>(n_states,0);
 
-    // n is like I said above, I - m.
+//     // v is easy: just one entry at the end.
+//     v[n_states-1] = 1;
 
-    // don't know if just assigning to an identity matrix would mess
-    // up the sparseness
-    for (unsigned long i = 0; i < n_states; ++i)
-      n(i,i) = 1;
+//     // n is like I said above, I - m.
+
+//     // I think just assigning to an identity matrix would mess
+//     // up the sparseness
+//     for (unsigned long i = 0; i < n_states; ++i)
+//       n(i,i) = 1;
     
-    typename graph_traits<network_t>::vertex_iterator vi,vend;
-    tie(vi,vend) = vertices(network);
-    set<vertex_t> addto, takefrom(vi,vend);
-    if (choose_parent_first)
-    { construct_n_visitor_by_parent<network_t,matrix_t> visitor(network,n);
-      traverse_sets(addto,takefrom,visitor);
-    }
-    else
-    { construct_n_visitor_by_child<network_t,matrix_t> visitor(network,n);
-      traverse_sets(addto,takefrom,visitor);
-    }
-    
-    // now n and v are assembled, find the answer!
-#if 1
-    //solve(n, v, unknown_storage_tag);
-    vnl_sparse_matrix_linear_system<double> system(n, v);
-    P = vnl_vector<double>(n_states,0);
-    // doesn't seem to do the right thing
-    //solver.multiply(v,P);
-    vnl_lsqr solver(system);
-    solver.minimize(P);
+//     typename graph_traits<network_t>::vertex_iterator vi,vend;
+//     tie(vi,vend) = vertices(network);
+//     set<vertex_t> addto, takefrom(vi,vend);
+//     // possibly a perturbation to one vertex's interpretation of fitness
+//     // is in order
+//     { constant_indicator rfm(parameters->residentFitness());
+//       string *pvs = parameters->get("perturb_r_at_vertex");
+//       if (pvs) // yes, there is one
+//       { vertex_t pv = string_to_unsigned(*pvs);
+//         typename boost::function<double(vertex_t)> mfm
+//           = (_1 == pv ? parameters->perturbed_mutant_fitness()
+//              : parameters->mutantFitness());
+//         if (parameters->choose_parent_first())
+//         { construct_n_visitor_by_parent<network_t,matrix_t>
+//             visitor(network,n,rfm,mfm);
+//           traverse_sets(addto,takefrom,visitor);
+//         }
+//         else
+//         { construct_n_visitor_by_child<network_t,matrix_t>
+//             visitor(network,n,rfm,mfm);
+//           traverse_sets(addto,takefrom,visitor);
+//         }
+//       }
+//       else // no, no perturbation
+//       { constant_indicator mfm(parameters->mutantFitness());
+//         if (parameters->choose_parent_first())
+//         { construct_n_visitor_by_parent<network_t,matrix_t>
+//             visitor(network,n,rfm,mfm);
+//           traverse_sets(addto,takefrom,visitor);
+//         }
+//         else
+//         { construct_n_visitor_by_child<network_t,matrix_t>
+//             visitor(network,n,rfm,mfm);
+//           traverse_sets(addto,takefrom,visitor);
+//         }
+//       }
+//     }
+
+//     // now n and v are assembled, find the answer!
+// #if 1
+//     //solve(n, v, unknown_storage_tag);
+//     vnl_sparse_matrix_linear_system<double> system(n, v);
+//     P = vnl_vector<double>(n_states,0);
+//     // doesn't seem to do the right thing
+//     //solver.multiply(v,P);
+//     vnl_lsqr solver(system);
+//     solver.minimize(P);
+// //     if (print_stuff)
+// //     { cout << asString(n) << v << '\n' << P << endl;
+// //       solver.diagnose_outcome(cout);
+// //     }
+// #else
+//     vnl_sparse_lu solver(n,vnl_sparse_lu::estimate_condition);
+//     solver.solve(v,&P);
 //     if (print_stuff)
 //     { cout << asString(n) << v << '\n' << P << endl;
-//       solver.diagnose_outcome(cout);
+//       cout << "det " << solver.determinant()
+// 	   << " rcond " << solver.rcond()
+// 	   << " upbnd " << solver.max_error_bound() << endl;
 //     }
-#else
-    vnl_sparse_lu solver(n,vnl_sparse_lu::estimate_condition);
-    solver.solve(v,&P);
-    if (print_stuff)
-    { cout << asString(n) << v << '\n' << P << endl;
-      cout << "det " << solver.determinant()
-	   << " rcond " << solver.rcond()
-	   << " upbnd " << solver.max_error_bound() << endl;
-    }
-#endif
-  }
-  double operator()(const network_t &network)
-  { // if (print_stuff)
-//     { print_network(network); cout << flush; } 
-    // do simple graph criteria, in case of zero
-    if (!is_fixation_candidate(network))
-      return 0;
-    // if not, do the full matrix operation
-    calculate(network);
-    // return mean prob of fixation across singleton states
-    typename network_t::vertices_size_type nv = num_vertices(network);
-    typename graph_traits<network_t>::vertex_iterator vi,vend;
-    double prob = 0;
-    for(tie(vi,vend) = vertices(network); vi != vend; ++vi)
-    { // the index of a given state is sum_{i in s} 2^i
-      unsigned long index = two_to_the(*vi);
-      prob += P[index];
-    }
-    prob /= nv;
-    return prob;
-  }
-};
+// #endif
+//   }
+//   double operator()(const network_t &network)
+//   { // if (print_stuff)
+// //     { print_network(network); cout << flush; } 
+//     // do simple graph criteria, in case of zero
+//     if (!is_fixation_candidate(network))
+//       return 0;
+//     // if not, do the full matrix operation
+//     calculate(network);
+//     // return mean prob of fixation across singleton states
+//     typename network_t::vertices_size_type nv = num_vertices(network);
+//     typename graph_traits<network_t>::vertex_iterator vi,vend;
+//     double prob = 0;
+//     for(tie(vi,vend) = vertices(network); vi != vend; ++vi)
+//     { // the index of a given state is sum_{i in s} 2^i
+//       unsigned long index = two_to_the(*vi);
+//       prob += P[index];
+//     }
+//     prob /= nv;
+//     return prob;
+//   }
+// };
 
-template<typename network_t>
-class analytic_selection_indicator
+// here, the continuous-time generator version
+template<typename network_t, typename pc>
+class analytic_selection_indicator : public ObjectWithParameters<pc>
 {
 protected:
+  using ObjectWithParameters<pc>::params;
+
+  // remember what's the last network we saw, for cache validation
+  vector<bool> cache_index;
+
   // store the generator
   typedef vnl_sparse_matrix<double> matrix_t;
   matrix_t G;
@@ -502,39 +559,77 @@ protected:
   // not including the empty and full states
   vnl_vector<double> p;
 
+  // also computed when p is: T[index-1] is expected time until absorption
+  // (either fixation or extinction) from that state, not including empty
+  // and full
+  vnl_vector<double> T;
+
 public:
-  void construct_matrix(const network_t &network)
-  { typename network_t::vertices_size_type nv = num_vertices(network);
+  analytic_selection_indicator(pc*_p)
+  { inheritParametersFrom(_p); }
+
+  void construct_matrices(const network_t &network)
+  { vector<bool> can = canonical_vb(network);
+    // disable caching in order to do sensitivities
+//     if (can == cache_index)
+//       return;
+    cache_index = can;
+
+    typename network_t::vertices_size_type nv = num_vertices(network);
     // caution with sizeable networks!  big matrix!!
     unsigned long n_states = two_to_the(nv);
     G = matrix_t(n_states,n_states); // resize and clear
 
     typename graph_traits<network_t>::vertex_iterator vi,vend;
     tie(vi,vend) = vertices(network);
-    set<typename graph_traits<network_t>::vertex_descriptor>
-      addto, takefrom(vi,vend);
-    construct_generator_visitor<network_t,matrix_t> visitor(network,G);
-    traverse_sets(addto,takefrom,visitor);
-  }
+    typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
+    set<vertex_t> addto, takefrom(vi,vend);
 
-  double compute_p(const network_t &network)  
-  {
-    construct_matrix(network);
+    // possibly a perturbation to one vertex's interpretation of fitness
+    // is in order
+    { constant_indicator rfm(params.residentFitness());
+      const string *pvs = params.get("perturb_r_at_vertex");
+      if (pvs) // yes, there is one
+      { vertex_t pv = string_to_unsigned(*pvs);
+        typedef one_of_these_things_indicator<vertex_t,double> mfm_t;
+        mfm_t mfm(params.mutantFitness(),
+                  pv, params.perturbed_mutant_fitness());
+        construct_generator_visitor<network_t,matrix_t,
+          constant_indicator, mfm_t>
+          visitor(network,G,rfm,mfm,&params);
+        traverse_sets(addto,takefrom,visitor);
+      }
+      else // no, no perturbation
+      { constant_indicator mfm(params.mutantFitness());
+        construct_generator_visitor<network_t,matrix_t,
+          constant_indicator, constant_indicator>
+          visitor(network,G,rfm,mfm,&params);
+        traverse_sets(addto,takefrom,visitor);
+      }
+    }
 
     // now G is constructed.
     // see the wiki for derivation: the matrix decomposes as
     //     [ 0 0 0 ]
-    // G = [ A Q B ] and the fixation probability is 
+    // G = [ A Q B ] for computation purposes
     //     [ 0 0 0 ]
+    vnl_sparse_matrix_utils<double>::
+      extract_submatrix_and_subcolumn(G,Q,1,1,G.rows()-2,G.cols()-2,
+				      B,G.cols()-1,1,G.cols()-2);
+  }
+
+  double compute_p(const network_t &network)  
+  {
+    construct_matrices(network);
+
+    // now the fixation probability is 
     // p_N(infinity) = p_N(0) - p_c(0) Q^-1 B
     // where p(t) = [ p_0(t) p_c(t) p_N(t) ]
     // and p(0) is the initial distribution
 
     // here we take p_N(0) = 0 and p_c(0) has 1/n for each singleton state
     // generate Q^-1 B and do the last bit informally
-    vnl_sparse_matrix_utils<double>::
-      extract_submatrix_and_subcolumn(G,Q,1,1,G.rows()-2,G.cols()-2,
-				      B,G.cols()-1,1,G.cols()-2);
+
     p.set_size(B.size());
 #if 1
     vnl_sparse_matrix_linear_system<double> system(Q,B);
@@ -557,8 +652,19 @@ public:
 
   virtual double operator()(const network_t &network)
   {
-    if (!is_fixation_candidate(network))
+    network_component_status status = test_fixation_candidate(network);
+    switch(status.flag)
+    {
+    case DISCONNECTED:
+    case MULTIPLE_SOURCE_COMPONENTS:
       return 0;
+    case ONE_SOURCE_COMPONENT:
+      if (status.source_size == 1)
+        return status.source_size / (double)num_vertices(network);
+      break;
+    default: // go on and do the calculation
+      break;
+    }
 
     compute_p(network);
 
@@ -570,18 +676,56 @@ public:
 
     return pfix;
   }
+
+  double compute_T(const network_t &network)  
+  {
+    construct_matrices(network);
+
+    T.set_size(B.size());
+
+    vnl_vector<double> ones(G.cols()-1,1.0);
+    vnl_sparse_matrix_linear_system<double> Tsystem(Q,ones);
+    vnl_lsqr Tsolver(Tsystem);
+    Tsolver.minimize(T);
+  }
+  virtual double expected_absorption_time(const network_t&network)
+  { 
+    network_component_status status = test_fixation_candidate(network);
+    switch(status.flag)
+    {
+    case DISCONNECTED:
+      return INFINITY;
+    default: // go on and do the calculation
+      break;
+    }
+
+    compute_T(network);
+
+    double ET = 0;
+    typename network_t::vertices_size_type nv = num_vertices(network);
+    for(unsigned long singleton = 1; singleton < G.rows(); singleton <<= 1)
+    { ET -= T[singleton - 1] / nv;
+    }
+    return ET;
+  }
 };
 
-template<typename network_t>
+template<typename network_t, typename pc>
+bool indicator_is_stochastic(analytic_selection_indicator<network_t,pc>&i)
+{ return false; }
+
+template<typename network_t, typename pc>
 class analytic_selection_indicator_fixed_origin
-  : public analytic_selection_indicator<network_t>
+  : public analytic_selection_indicator<network_t,pc>
 {
 public:
   unsigned long start_state;
 
   analytic_selection_indicator_fixed_origin(
-    typename graph_traits<network_t>::vertex_descriptor start_vertex)
-    : start_state(two_to_the(start_vertex))
+    typename graph_traits<network_t>::vertex_descriptor start_vertex,
+    pc*_p)
+    : start_state(two_to_the(start_vertex)),
+      analytic_selection_indicator<network_t,pc>(_p)
   {} 
 
   virtual double operator()(const network_t &network)
@@ -596,7 +740,22 @@ public:
 // 	 << "B:\n" << analytic_selection_indicator<network_t>::B << endl
 // 	 << "p: " << analytic_selection_indicator<network_t>::p << endl;
 
-    return - analytic_selection_indicator<network_t>::p[start_state-1];
+    return - analytic_selection_indicator<network_t,pc>::p[start_state-1];
+  }
+};
+
+// shim attaching to the above class, to get its
+// expected absorption time.
+template<typename fix_ind_class>
+class expected_absorption_time_indicator
+{
+protected:
+  fix_ind_class&fix_ind;
+public:
+  expected_absorption_time_indicator(fix_ind_class&_fi) : fix_ind(_fi) {}
+  template<typename arg_t>
+  double operator()(const arg_t&a)
+  { return fix_ind.expected_absorption_time(a);
   }
 };
 

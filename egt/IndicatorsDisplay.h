@@ -1,4 +1,7 @@
 //  -*- C++ -*-
+#ifndef _INDICATORS_DISPLAY_H_
+#define _INDICATORS_DISPLAY_H_
+
 #include "TimeSeriesDisplay.h"
 #include "CSVController.h"
 //#include "indicators.h"
@@ -25,58 +28,100 @@ public:
 
 static unsigned idc_serial_counter = 0;
 
-template<typename subject_t>
-class IndicatorsDisplayController : public TimeSeriesController<int>
+template<typename subject_t,typename ParamsClass>
+class IndicatorsDisplayController :
+  public TimeSeriesController<int,ParamsClass>
 {
   vector< indicatorholder_base<subject_t>* > indicators;
   vector<string> names;
   CSVDisplay *csvdisplay;
   unsigned serial;
+  using ObjectWithParameters<ParamsClass>::params;
+  using TimeSeriesController<int,ParamsClass>::display;
+  using DisplayController< TimeSeriesDisplay<int,ParamsClass>,
+                           ParamsClass >::recordCounter;
 public:
-  IndicatorsDisplayController(double displayPeriod, double wind=HUGE)
-    : TimeSeriesController<int>(displayPeriod,-1,wind),
-      csvdisplay(0), serial(idc_serial_counter++)
-  {} 
+  IndicatorsDisplayController()
+    : csvdisplay(0), serial(idc_serial_counter++)
+  {}
+
+//   void inheritValuesFrom(Parameters*upstream)
+//   { Parameters::inheritValuesFrom(upstream);
+//     // take recordEvery to local storage
+//     recordEvery = params.recordEvery();
+//     // and get rid of the one the superclass uses
+//     params.setrecordEvery(-1);
+//   }
   template<typename indic_t>  
-  void installIndicator(indic_t*i,string name)
+  void _installIndicator(indic_t*i,string name)
   { if (!display)
       createDisplay();
     display->setTitle(indicators.size(),name);
     indicators.push_back(new indicatorholder<subject_t,indic_t>(*i));
     names.push_back(name);
   }
+  template<typename indic_t>  
+  void installIndicator(indic_t*i,string name)
+  { _installIndicator(i,name);
+  }
   template<typename indic_t>
   void installIndicator(indic_t&i,string name)
-  { installIndicator(&i,name);
+  { _installIndicator(&i,name);
   }
   // install a copy if it's a temporary object, best to avoid
   template<typename indic_t>
   void installIndicator(const indic_t&i,string name)
-  { installIndicator(new indic_t(i),name);
+  { _installIndicator(new indic_t(i),name);
+  }
+  template<typename PC>
+  void installIndicator(ObjectWithParameters<PC>*o)
+  { _installIndicator(o);
+    o->inheritParametersFrom(this);
+  }
+  template<typename PC>
+  void installIndicator(ObjectWithParameters<PC>&o)
+  { installIndicator(&o);
   }
   
-  string outdir()
-  { return "out";
-  }
   string filenamebase(void)
-  { ostringstream oss;
+  { string pfb = params.outfilenamebase();
+    if (pfb != "") return pfb;
+    // else
+    ostringstream oss;
     oss << "indicators-" << serial;
     return oss.str();
   }
   int color(int k)
   { return k+1;
   }
-  void recordFile(double t) // shouldn't be called
-  { cerr << "wrong IndicatorsDisplay::recordFile" << endl; }
-  void recordFile(double t, const subject_t&subject)
-  { *csvdisplay << t;
+
+  // this is called by the superclass' update() but does nothing
+  void recordFile(double t)
+  {}
+  //{ cerr << "wrong IndicatorsDisplay::recordFile" << endl; }
+
+  vector<double> lasttime;
+  // this is called by our update(), does something
+  // returns true if some value is changed since last time it was
+  // called
+  bool recordFile(double t, const subject_t&subject)
+  { if (!display) createDisplay();
+    lasttime.resize(indicators.size());
+    bool worthdisplaying = false;
+    *csvdisplay << t;
     for (int i = 0; i < indicators.size(); ++i)
     { double ind_i = (*indicators[i])(subject);
       display->record(i, t, ind_i);
+      if (ind_i != lasttime[i])
+      { lasttime[i] = ind_i;
+        worthdisplaying = true;
+      }
       *csvdisplay << ind_i;
     }
     csvdisplay->newRow();
+    return worthdisplaying;
   }
+
   void update(double t, const subject_t&subject)
   { if (!display)
       createDisplay();
@@ -85,17 +130,30 @@ public:
         *csvdisplay << (i==0? "#"+names[i] : names[i]);
       csvdisplay->newRow();
     }
-    recordFile(t,subject);
-    DisplayController< TimeSeriesDisplay<int> >::update(t);
+    bool worthredisplaying = false;
+    if (recordCounter + params.recordEvery() <= t)
+    { worthredisplaying = recordFile(t,subject);
+      recordCounter = t;
+    }
+    if (worthredisplaying)
+      DisplayController< TimeSeriesDisplay<int,ParamsClass>, ParamsClass >
+        ::update(t);
   }
   void createDisplay()
   { if (!display)
-    { display = new TimeSeriesDisplay<int>(this);
+    { display = new TimeSeriesDisplay<int,ParamsClass>(this);
+      display->inheritParametersFrom(params);
       display->initialize();
     }
-    // memory leak here
     if (!csvdisplay)
-    { csvdisplay = new CSVDisplay(outdir()+'/'+filenamebase()+".csv");
+    { csvdisplay = new CSVDisplay(params.outputDirectory()
+                                  +'/'+filenamebase()+".csv");
     }
   }
+  ~IndicatorsDisplayController()
+  { if (display)    delete display;
+    if (csvdisplay) delete csvdisplay;
+  }
 };
+
+#endif//_INDICATORS_DISPLAY_H_

@@ -19,7 +19,7 @@
 #include <unistd.h>
 
 //template<class DISPLAY>
-template<class K>
+template<class K, class ParamsClass>
 class TimeSeriesController;
 
 class point_tx_t
@@ -49,14 +49,15 @@ public:
   {}
 };
 
-template<class K, class lineage_t=K>
-class TimeSeriesDisplay : public GnuplotDisplay
+template<class K, class ParamsClass=Parameters, class lineage_t=K>
+class TimeSeriesDisplay : public GnuplotDisplay<ParamsClass>
 {
 public:
+  using GnuplotDisplay<ParamsClass>::gnuplot;
   typedef K key_t;
   
 protected:
-  TimeSeriesController<key_t> &xs;
+  TimeSeriesController<key_t,ParamsClass> &xs;
   // if datafile is used, it records the time series to filesystem
   ofstream datafile;
   // store the timeseries here
@@ -78,7 +79,7 @@ protected:
   string plottitle;
   
 public:
-  TimeSeriesDisplay(TimeSeriesController<key_t>*con);
+  TimeSeriesDisplay(TimeSeriesController<key_t,ParamsClass>*con);
 
   virtual ~TimeSeriesDisplay() {}
 
@@ -133,23 +134,21 @@ protected:
   void removeKeyFromMemory(K i);
 };
 
-template<class K>
+template<class K, class ParamsClass>
 class TimeSeriesController :
-  public DisplayController< TimeSeriesDisplay<K> >
+  public DisplayController< TimeSeriesDisplay<K,ParamsClass>, ParamsClass >
 {
-  friend class TimeSeriesDisplay<K>;
+  friend class TimeSeriesDisplay<K,ParamsClass>;
 public:
   typedef K key_t;
+  typedef DisplayController< TimeSeriesDisplay<K,ParamsClass>, ParamsClass >
+    superclass;
 protected:
   // newer g++'s are very picky about these things
-  using DisplayController< TimeSeriesDisplay<K> >::display;
+  using superclass::display;
+  using ObjectWithParameters<ParamsClass>::params;
 
-  double window;
 public:
-  TimeSeriesController(double displayPeriod, double filePeriod,
-		       double wind=HUGE)
-    : DisplayController< TimeSeriesDisplay<K> >(displayPeriod,filePeriod),
-      window(wind) {}
 
   virtual ~TimeSeriesController()
   { //if (display) delete display;
@@ -161,6 +160,7 @@ public:
   // and optionally, some of these
   virtual void updateDisplay(double t)
   {
+    double window = params.scrollingWindow();
     double t0 = (window < t ? t - window : 0);
     display->updateDisplay(t0,t);
   }
@@ -170,20 +170,19 @@ public:
   { return 0; }
   virtual string title(void)
   { return ""; } 
-  using DisplayController< TimeSeriesDisplay<K> >::outdir;
   virtual string filenamebase(void)
-  { return ""; }
+  { return params.outfilenamebase(); }
   virtual string gpfilename(void)
   { string fnb = filenamebase();
     if (fnb.length() == 0)
       return "";
-    return outdir() + '/' + fnb + ".gp";
+    return params.outputDirectory() + '/' + fnb + ".gp";
   }
   virtual string datafilename(void)
   { string fnb = filenamebase();
     if (fnb.length() == 0)
       return "";
-    return outdir() + '/' + fnb + ".dat";
+    return params.outputDirectory() + '/' + fnb + ".dat";
   }
   virtual int color(key_t k)
   { return -1; } 
@@ -195,17 +194,17 @@ public:
 
 // template function definitions
 
-template <class K, class lineage_t>
-TimeSeriesDisplay<K, lineage_t>
-::TimeSeriesDisplay(TimeSeriesController<K>*con)
+template <class K, class PC, class lineage_t>
+TimeSeriesDisplay<K, PC, lineage_t>
+::TimeSeriesDisplay(TimeSeriesController<K,PC>*con)
   : xs(*con),
     vertical(xs.vertical()), lines(true), y2rangeset(false)
 {}
 
-template<class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::initialize(void)
+template<class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::initialize(void)
 {
-  GnuplotDisplay::initialize();
+  GnuplotDisplay<PC>::initialize();
   string _datafilename = xs.datafilename();
   if (_datafilename.length() > 0)
     datafile.open(_datafilename.c_str());
@@ -214,14 +213,14 @@ void TimeSeriesDisplay<K, lineage_t>::initialize(void)
 //     gnuplot << "set title \"" << _datafilename << "\"\n";
 }
 
-template <class K, class lineage_t>
-string TimeSeriesDisplay<K, lineage_t>::gnuplotLogFile()
+template <class K, class PC, class lineage_t>
+string TimeSeriesDisplay<K, PC, lineage_t>::gnuplotLogFile()
 {
   return xs.gpfilename();
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::
   connectLineages(K daughter, K parent, double birth_t)
 { if (lineage_by_series.find(parent) != lineage_by_series.end())
     setLineage(daughter,lineage_by_series[parent]);
@@ -241,8 +240,8 @@ void TimeSeriesDisplay<K, lineage_t>::
     record(daughter,birth_pt->t,birth_pt->x);
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::
   setLineage(K series, lineage_t lineage)
 {
   lineages.insert(lineage);
@@ -251,8 +250,8 @@ void TimeSeriesDisplay<K, lineage_t>::
 }
 
 // if K isn't compatible with lineage_t you have to override this
-template <class K, class lineage_t>
-lineage_t TimeSeriesDisplay<K, lineage_t>::defaultLineage(K k)
+template <class K, class PC, class lineage_t>
+lineage_t TimeSeriesDisplay<K, PC, lineage_t>::defaultLineage(K k)
 { return lineage_t(k);
 }
 
@@ -262,8 +261,8 @@ ostream &operator<<(ostream&o, const pair<A,B>&p)
 { return o << '(' << p.first << ',' << p.second << ')';
 }
 
-template <class K, class lineage_t>
-bool TimeSeriesDisplay<K, lineage_t>::record(K k, double t, double x)
+template <class K, class PC, class lineage_t>
+bool TimeSeriesDisplay<K, PC, lineage_t>::record(K k, double t, double x)
 {
 //   typename series_map_t::iterator fk = series.find(k);
 //   bool have = (fk != series.end()); // was it already there
@@ -301,8 +300,8 @@ bool TimeSeriesDisplay<K, lineage_t>::record(K k, double t, double x)
   return have;
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::deactivate(K k, double t)
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::deactivate(K k, double t)
 {
   typename series_map_t::iterator fk = series.find(k);
   if (fk!=series.end())
@@ -315,8 +314,8 @@ void TimeSeriesDisplay<K, lineage_t>::deactivate(K k, double t)
   }
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::
   announceSeries(ostream& os, timeseries_t &ts, double t)
 {
   os << " '-'";
@@ -330,8 +329,8 @@ void TimeSeriesDisplay<K, lineage_t>::
   os << " w l " << ts.color;
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::removeKeyFromMemory(K i)
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::removeKeyFromMemory(K i)
 { lineage_t lin = lineage_by_series[i];
   lineage_by_series.erase(i);
   series_by_lineage[lin].erase(i);
@@ -344,16 +343,18 @@ void TimeSeriesDisplay<K, lineage_t>::removeKeyFromMemory(K i)
 // Write header info for Gnuplot
 // Subclasses should overwrite with their own needs
 // (e.g., y2tics, parametric, nokey)
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::writeGnuplotHeaders()
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::writeGnuplotHeaders()
 {
   gnuplot << "set title \"" << plottitle << "\"\n";
 }
 
-template <class K, class lineage_t>
-void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
+template <class K, class PC, class lineage_t>
+void TimeSeriesDisplay<K, PC, lineage_t>::updateDisplay(double t0, double t1)
 {
-  rewindStream();
+  double recordEvery = xs.recordEvery();
+
+  GnuplotDisplay<PC>::rewindStream();
   writeGnuplotHeaders();
 
   // first, figure out what times to plot, to get all the 
@@ -403,7 +404,7 @@ void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
 	}
 	// erase if it's too close to the last one
 	//  (the spacing `recordEvery' grows as time passes)
- 	else if (ts.series[i].t - lastt < xs.recordEvery/2 /* /10 */)
+ 	else if (ts.series[i].t - lastt < recordEvery/2 /* /10 */)
 	{
 //  	  cout << "weed (" << lastt << "..) " << ts.series[i].t << "\n";
  	  ts.series.erase(ts.series.begin()+i);
@@ -498,7 +499,12 @@ void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
 	 sri != series_by_lineage[*li].end(); ++sri)
   {
     timeseries_t &ts = series[*sri];
-    datastream << "# " << ts.basename << "\n";
+    string title;
+    if (ts.basename.length() > 0)
+      title = ts.basename;
+    else if (ts.title.length() > 0)
+      title = ts.title;
+    datastream << "# " << title << "\n";
     if (ts.series.size() == 0)
       continue;
   
@@ -507,6 +513,7 @@ void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
 
     stoptimes_t::iterator si = ts.stoptimes.begin(),
       se = ts.stoptimes.end();
+    bool last_was_blank = false;
     double st = (si != se ? *si : HUGE);
     for (typename series_t::iterator pi=ts.series.begin();
 	 pi != ts.series.end(); ++pi)
@@ -525,10 +532,18 @@ void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
       { px = px + (pi[1].x - px) * (t0 - pt) / (pi[1].t - pt);
         pt = t0;
       }
-      if (vertical)
-	datastream << pi->x << ' ' << pt << '\n';
+      if (isnan(pi->x) || isnan(pt))
+      { if (!last_was_blank)
+          datastream << '\n';
+        last_was_blank = true;
+      }
       else
-	datastream << pt << ' ' << pi->x << '\n';
+      { if (vertical)
+          datastream << pi->x << ' ' << pt << '\n';
+        else
+          datastream << pt << ' ' << pi->x << '\n';
+        last_was_blank = false;
+      }
     }
     while (st != HUGE)
     { 
@@ -550,9 +565,7 @@ void TimeSeriesDisplay<K, lineage_t>::updateDisplay(double t0, double t1)
 
   // plot command is done, follow it with all the points.
   gnuplot << datastream.str();
-  plotBufferedData();
+  GnuplotDisplay<PC>::plotBufferedData();
 }
-
-
 
 #endif//TIMESERIESDISPLAY_H

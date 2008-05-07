@@ -1,5 +1,6 @@
 // -*- C++ -*-
-#ifndef __network_optimize_h__
+//#ifndef __network_optimize_h__
+#if 0
 #define __network_optimize_h__
 
 #include <boost/random.hpp>
@@ -11,11 +12,15 @@
 // whether to print information to the terminal
 bool print_stuff = true;
 
+// what experiment to do
+typedef enum { OPTIMIZE, SAMPLE } experiment_t;
+experiment_t experiment = SAMPLE; // OPTIMIZE
+
 //  --- for the main function
 
 // start with a random graph with this many vertices and edges
-int init_n_vertices = 13;//5;//12;//15
-double init_density = 0;
+int init_n_vertices = 150;//13;//5;//12;//15
+double init_density = 0.5;//0;
 
 //  --- for the optimizer
 
@@ -62,10 +67,10 @@ bool animate_fixation = false;
 //  go, to estimate probability of fixation
 // but note, these results are stored and more trials are added in at
 //  later calls, so this is only the minimum sample size.
-int timesToTestFixation = 300;
+int timesToTestFixation = 300;//10000;
 
 // if no fixation after this many reproduction events, quit trying
-int maxStepsToFixation = 1000;
+int maxStepsToFixation = INT_MAX;//1000 * init_n_vertices;
 
 //  --- for the swarm process
 

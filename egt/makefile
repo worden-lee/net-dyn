@@ -1,6 +1,6 @@
 VXLDIR = ../vxl
 ESTRDIR = ../libexecstream
-CFLAGS=-g -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(ESTRDIR)
+CFLAGS=-g -pg -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(ESTRDIR)
 LDFLAGS=$(ESTRDIR)/exec-stream.o -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
 
 # enable to use compiler optimization
@@ -12,10 +12,14 @@ endif
 #default: swarming
 default: network-optimize
 
-NOSRC = network-optimize.cpp DotDisplay.cpp TimeSeriesDisplay.cpp
+over: clean default
+
+NOSRC = network-optimize.cpp \
+	TimeSeriesDisplay.cpp GnuplotDisplay.cpp Parameters.cpp
 NOOBJ = $(NOSRC:.cpp=.o)
 
-SWSRC = swarming.cpp TimeSeriesDisplay.cpp
+SWSRC = swarming.cpp  \
+	TimeSeriesDisplay.cpp GnuplotDisplay.cpp Parameters.cpp
 SWOBJ = $(SWSRC:.cpp=.o)
 
 # %.o : %.cpp

@@ -49,11 +49,32 @@ inline int fsign(double x) {
   else return -1;
 }
 
+// estimate accuracy of a Bernoulli sample
+// N = var / (accuracy * p)^2
+// or accuracy = sqrt(var/N) / p
+// for example, if p = 0.25, accuracy = 0.1, we find N = 300
+// (sample mean = p, var = p(1-p))
+inline double Bernoulli_accuracy(double p, unsigned N)
+{ if (N == 0)
+    return std::numeric_limits<double>::infinity();
+  if (p <= 0 || p >= 1) // this is a problem case, but is this the solution?
+    return sqrt(1.0/N);
+  else
+    return sqrt(p*(1-p)/N)/p;
+}
+
+// conservative estimate of how many Bernoulli samples to take for the
+// specified accuracy (p unknown)
+// the maximum variance is 0.25, so we use that
+inline unsigned Bernoulli_estimate_n(double accuracy)
+{ return unsigned(1/(accuracy*accuracy));//0.25 / (accuracy * 0.5)^2
+}
+
 // the % operator returns negative when the moduland is negative.
 // this always returns a number between zero and modulus, not
 // including modulus
-template<typename int_type>
-inline int_type mod_correct(int_type moduland, int_type modulus)
+template<typename int_type, typename int_type_2>
+inline int_type mod_correct(int_type moduland, int_type_2 modulus)
 { int_type pc = moduland % modulus;
   if (modulus > 0 && pc < 0)
     pc += modulus;
@@ -129,6 +150,11 @@ inline int string_to_int(const string &x)
 inline string int_to_string(int x)
 { return string(fstring("%d",x)); }
 
+inline unsigned string_to_unsigned(const string &x)
+{ return (unsigned)atol(x.c_str()); }
+inline string unsigned_to_string(unsigned x)
+{ return string(fstring("%ud",x)); }
+
 inline long string_to_long(const string &x)
 { return atol(x.c_str()); }
 inline string long_to_string(long x)
@@ -137,7 +163,7 @@ inline string long_to_string(long x)
 inline double string_to_double(const string &x)
 { return atof(x.c_str()); }
 inline string double_to_string(double x)
-{ return string(fstring("%f",x)); }
+{ return string(fstring("%g",x)); }
 
 inline bool string_to_bool(const string &x)
 { return x == "true"; } 
@@ -147,11 +173,53 @@ inline string bool_to_string(bool x)
 inline const string &string_to_string(const string &x)
 { return x; }
 
+// an extension of the std::accumulate idea
+// accumulates a transform of the values in [first,last) using operator+,
+// starting with the value init.
+// i.e. returns init + f(*first) + f(*(first+1)) + ...
+template<typename _Iterator, typename _Rtp, typename _Fn>
+_Rtp accumulate_transformed(_Iterator first, _Iterator end, _Rtp init, _Fn f)
+{
+  for (; first != end; ++first)
+    init = init + f(*first);
+  return init;
+}
+
+// this is like accumulate_transformed but uses [] instead of ()
+// i.e. returns init + map[*first] + map[*(first+1)] + ...
+template<typename _Iterator, typename _Rtp, typename _Map>
+_Rtp accumulate_mapped(_Iterator first, _Iterator end, _Rtp init, _Map map)
+{
+  for (; first != end; ++first)
+    init = init + map[*first];
+  return init;
+}
+
 // template<class A, class B>
 // ostream &operator<<(ostream&o, pair<A,B>&p)
 // { return o << '(' << p.first << ',' << p.second << ')';
 // }
-  
+
+// ensure path can be created, by creating any parent directories needed.
+// path itself is not created.
+#include <sys/stat.h>
+inline int mkpath(const char *path)
+{ char buf[strlen(path)+1];
+  const char *it = path;
+  char *bit = buf;
+  int ret;
+  while(*it)
+  { if (*it == '/')
+    { *bit=0;
+      ret = mkdir(buf,0755);
+      if (ret)
+        return ret;
+    }
+    *bit++ = *it++;
+  }
+  return 0;
+}
+
 // this thing is like a set<> that only needs to remember its min and max
 template<typename T>
 class range

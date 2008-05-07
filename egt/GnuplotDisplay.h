@@ -3,6 +3,7 @@
 #define GNUPLOT_DISPLAY_H
 #include "Display.h"
 #include "exec-stream.h"
+#include "Parameters.h"
 #include <fstream>
 #include <iostream>
 #include <errno.h>
@@ -10,28 +11,52 @@
 #include <sys/stat.h>
 using namespace std;
 
-class GnuplotDisplay : public Display
+extern vector<exec_stream_t*> estream_boneyard;
+
+template<typename params_t>
+class GnuplotDisplay : public Display, public ObjectWithParameters<params_t>
 {
 public:
-  ofstream gnuplot;        
+  using ObjectWithParameters<params_t>::params;
 protected:
-  exec_stream_t estream;
-  ostream &gpProcess;
-  string openFilename;
   bool started;
-
+  // getting fancy: recycle estreams in a boneyard, so we don't waste
+  // time killing and starting gnuplots
+  exec_stream_t *estream;
   // gnuplot is an output stream for the logfile
   // -- subclasses should use it, as the instructions go to gnuplot
   // gpProcess is a wrapper for gnuplot's stdin
+  ostream &gpProcess;
+public:
+  ofstream gnuplot;        
+protected:
+  string openFilename;
 
+  static exec_stream_t *get_estream()
+  { if (estream_boneyard.empty())
+      return 0;
+    //else
+    exec_stream_t*bk = estream_boneyard.back();
+    estream_boneyard.pop_back();
+    return bk;
+  }
+  static void give_estream(exec_stream_t*es)
+  { estream_boneyard.push_back(es); }
+  
 public:
   // don't open estream in constructor because of virtual
   //  gnuplotLogFile() -- do it in initialize()
-  GnuplotDisplay() : gpProcess(estream.in()), started(false) {}
+  GnuplotDisplay()
+    : started(true),
+      estream(get_estream() ? : ((started=false), new exec_stream_t)),
+      gpProcess(estream->in())
+  {}
   
   virtual ~GnuplotDisplay()
   { try
-    { estream.kill();
+    { give_estream(estream);
+      //estream.kill();
+      estream = 0;
     } 
     catch( std::exception const & e )
     { std::cerr << "error: " << e.what() << "\n";
@@ -48,9 +73,9 @@ public:
 	  mkdir(ofdir.c_str(),S_IRWXU|S_IRWXG|S_IRWXO);
 	}
         gnuplot.open(openFilename.c_str(), ios_base::binary);
-        //if (!parameters.disableDisplaying())
+        if (params.displayToScreen())
 	{ vector<string> inv = gnuplotInvocation();
-	  estream.start(inv[0], inv.begin()+1, inv.end());
+	  estream->start(inv[0], inv.begin()+1, inv.end());
 	}
       }
       catch( std::exception const & e )
@@ -66,22 +91,15 @@ public:
   // multiple files will be created.
   virtual string gnuplotLogFile(void)
   {
-    return "default.gp";
+    return params.outputDirectory() + "/default.gp";
   }
 
   // Appropriate call for gnuplot (or to bit bucket if display is off)
   virtual vector<string> gnuplotInvocation(void)
   {
     vector<string> inv;
-//     if (parameters.disableDisplaying())
-//     { inv.push_back("sh");
-//       inv.push_back("-c");
-//       inv.push_back("cat >/dev/null");
-//     }
-//     else
-    { inv.push_back("gnuplot");
-      inv.push_back("-noraise");
-    }
+    inv.push_back("gnuplot");
+    inv.push_back("-noraise");
     return inv;
   }
 
@@ -108,7 +126,7 @@ protected:
     if (truncate(openFilename.c_str(),pos))
       cerr << "Error truncating " << openFilename << ": "
 	   << strerror(errno) << endl;
-    //if (!parameters.disableDisplaying())
+    if (params.displayToScreen())
       gpProcess << "load \"" << openFilename << "\"" << endl;
   }
 
@@ -127,7 +145,7 @@ protected:
   // Clear the Gnuplot graph
   void clear()
   {
-    //if (!parameters.disableDisplaying())
+    if (params.displayToScreen())
       gpProcess << "clear" << endl;
   }
 };

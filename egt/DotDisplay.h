@@ -14,52 +14,64 @@
 #include <iostream>
 using namespace std;
 
+template<typename PC>
 class DotDisplay;
 
-class DotGraphController : public DisplayController<DotDisplay>
+template<typename PC>
+class DotGraphController
+  : public DisplayController<DotDisplay<PC>,PC>
 {
 public:
-  DotGraphController(double period, double fperiod);
-  virtual ~DotGraphController();
-  
+  using ObjectWithParameters<PC>::params;
+
   void createDisplay();
   
   virtual bool approve(void) 
   { return true; }
   virtual bool allowDisplaying(void)
-  { return approve(); } 
+  { return params.displayToScreen(); } 
   virtual bool allowRecording(void)
   { return true; }
 
   virtual string title(void)
   { return "Community Graph"; }
   virtual string dotdir()
-  { return outdir(); }
-  virtual string filebasename(void)
-  { return dotdir()+"/graph"; }
+  { return params.outputDirectory()+"/dot"; }
+  virtual string filenamebase(void)
+  { string pfb = params.outfilenamebase();
+    if (pfb == "") pfb = "graph";
+    return pfb;
+  }
   virtual string graphfile(void)
-  { return filebasename()+".dot"; }
+  { return dotdir()+'/'+filenamebase()+".dot"; }
   virtual string epsfile(void)
-  { return filebasename()+".eps"; }
+  { return dotdir()+'/'+filenamebase()+".eps"; }
+  virtual bool writes_positions()
+  { return false; }
   
   //void _update(void);
 //   void recordFile(double t);
 //   void updateDisplay(double t);
+
+  virtual ~DotGraphController();
 };
 
+template<typename ParamsClass>
 class DotDisplay: public Display
 {
 protected:
-  DotGraphController *xs;
+  DotGraphController<ParamsClass> *xs;
   ofstream os;
   string graphfile;
   bool startedgv;
   int gvpid;
   bool wrote;
+  bool useHUP;
   
 public:
-  DotDisplay(DotGraphController *a)
-    : xs(a), startedgv(false), gvpid(-1), wrote(false)
+  DotDisplay(DotGraphController<ParamsClass> *a)
+    : xs(a), startedgv(false), gvpid(-1), wrote(false),
+      useHUP(xs->ghostviewUpdateStrategy() == "signal")
   {
     (void)mkdir(xs->dotdir().c_str(),S_IRWXU|S_IRWXG|S_IRWXO);
     //if(displayEvery>0)
@@ -68,7 +80,7 @@ public:
 
   void recordFile(double t)
   {
-    graphfile = xs->dotdir()+'/'+xs->graphfile();
+    graphfile = xs->graphfile();
     os.open(graphfile.c_str());
     writeGraph(os);
     os.close();
@@ -77,9 +89,9 @@ public:
   virtual void writeGraph(ostream &ost)
   {
   }
-  static string ghostviewCommand()
+  string ghostviewCommand()
   {
-    return "/usr/bin/gv";
+    return xs->params.ghostviewCommand();
   }
   
   virtual void ensureGV(void)
@@ -110,13 +122,13 @@ public:
       }
     }
 
-    if (gvpid <= 0) // if we need to start a gv process
+    if (gvpid <= 0 || !useHUP) // if we need to start a gv process
     {
       int pid = fork();
       if (pid == 0)
       { // child process in here
 	const string &gvcomm = ghostviewCommand();
-	string eps = xs->dotdir() + "/" + xs->epsfile();
+	string eps = xs->epsfile();
 	//cout << "DotDisplay child process: execlp "
 	//     << gvcomm << ' ' << buf << endl;
 	execlp(gvcomm.c_str(), gvcomm.c_str(), eps.c_str(), NULL);
@@ -149,9 +161,9 @@ public:
     {
       string dotcomm =
 	//string("/usr/bin/dot -Tps -o")
-	string("/usr/bin/neato -Goverlap=scale -Gsplines=true -Tps -o")
-	+ xs->dotdir() + "/" + xs->epsfile()
-	+ " " + graphfile;
+	string("/usr/bin/neato ") + (xs->writes_positions()? "-n1 ":"")
+        + "-Goverlap=scale -Gsplines=true -Tps -o"
+	+ xs->epsfile() + " " + graphfile;
       
       //cout << dotcomm << endl;
       if(system(dotcomm.c_str()))
@@ -177,5 +189,15 @@ public:
     }
   }
 };
+
+template<class PC>
+void DotGraphController<PC>::createDisplay()
+{ DisplayController<DotDisplay<PC>,PC>::display
+    = new DotDisplay<PC>(this);
+}
+
+template<class PC>
+DotGraphController<PC>::~DotGraphController()
+{ delete DisplayController<DotDisplay<PC>,PC>::display; }
 
 #endif // DOTDISPLAY_H
