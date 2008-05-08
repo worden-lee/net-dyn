@@ -1,0 +1,8 @@
+include settings/defaults-swarming.settings
+experiment COMPLETE
+n_rooms 2
+n_individuals 11
+n_mobile 1
+
+animate_fixation true
+animate_estimates true

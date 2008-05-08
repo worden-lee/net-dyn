@@ -1,0 +1,9 @@
+
+toggle_edge_mutation_probability 0.85
+double_toggle_mutation_probability 0.05
+remove_vertex_mutation_probability 0
+merge_vertices_mutation_probability 0
+attach_vertex_mutation_probability 0
+reattach_vertex_mutation_probability 0.05
+merge_and_clone_mutation_probability 0.05
+# split_edge_mutation_probability is the remainder

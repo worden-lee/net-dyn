@@ -1,0 +1,22 @@
+# default parameter settings for the swarm program
+include settings/defaults-general.settings
+choose_parent_first true
+residentFitness 1
+mutantFitness 1.2
+room_switch_rate 0.1
+mobilityIncreasesWithFitness false #true
+
+print_stuff false #true
+timesToTestFixation 1000 #10000
+#r 1.2
+max_n_vertices_for_matrix 15
+maxStepsToFixation 1000000
+
+# default experiment
+experiment SAMPLE
+swarming_pattern NETWORK
+initial_graph_type COMPLETE
+n_rooms 2
+n_individuals 3
+n_mobile 1
+

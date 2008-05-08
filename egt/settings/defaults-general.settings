@@ -1,0 +1,28 @@
+# default parameter settings shared by network and swarm experiments
+
+outputDirectory out
+paramsDumpFile all.settings
+displayToScreen true
+recordEvery 0
+displayEvery 0
+scrollingWindow 10000000
+gnuplotCommand gnuplot
+ghostviewCommand gv
+
+print_stuff true
+
+# for hill climbing
+trialsForLocalOptimum 200
+maxNeutralSteps 10000
+
+# for simulated annealing
+#annealing_initial_temperature 0.02
+# these good for exponentialprob
+# for small graphs
+annealing_initial_temperature 0.0007
+annealing_cooling_rate 0.0000001
+# for bigger ones
+#annealing_initial_temperature 0.008
+#annealing_cooling_rate 0.00001
+#annealing_initial_temperature 0.01
+#annealing_cooling_rate 0.000001

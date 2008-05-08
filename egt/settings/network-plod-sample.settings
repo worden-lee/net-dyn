@@ -1,0 +1,9 @@
+experiment SAMPLE # OPTIMIZE
+initial_graph_type PLOD
+
+n_vertices 400 # 150 #13 #5 #12 #15
+
+pl_alpha 1.5
+pl_beta 10000
+
+animate_estimates true

@@ -1,0 +1,26 @@
+experiment SENSITIVITY
+initial_graph_type STAR
+n_vertices 8
+perturbed_mutant_fitness 1.21
+monte_carlo_selection_accuracy 0.04
+
+# time: 
+#real    1m21.527s with sets (but maybe without -pg, without -O* for sure)
+#user    0m25.038s
+#sys     0m0.204s
+
+#real    1m40.914s with bit vectors (with -pg, without -O*)
+#user    0m28.282s
+#sys     0m0.220s
+#real    1m35.857s
+#user    0m28.254s
+#sys     0m0.200s
+#real    1m29.899s source a little more optimized
+#user    0m25.234s
+#sys     0m0.248s
+#real    0m5.979s compiled with -O3 and no -pg
+#user    0m0.376s
+#sys     0m0.028s
+
+monte_carlo_selection_accuracy 0.01
+

@@ -1,0 +1,4 @@
+n_vertices 30
+include settings/same-size-only.settings
+reattach_vertex_mutation_probability 0
+merge_and_clone_mutation_probability 0.1

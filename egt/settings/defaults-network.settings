@@ -1,0 +1,42 @@
+# default parameter settings for network experiments
+include settings/defaults-general.settings
+
+#  --- for the main function
+
+experiment OPTIMIZE
+initial_graph_type RANDOM
+
+n_vertices 8
+
+# density for ER random graph
+er_density 0 #0.5
+
+#  --- for the optimizer
+
+animate_optimization true #false
+
+toggle_edge_mutation_probability 0.85
+double_toggle_mutation_probability 0.05
+remove_vertex_mutation_probability 0.025
+merge_vertices_mutation_probability 0.025
+attach_vertex_mutation_probability 0.02
+reattach_vertex_mutation_probability 0
+merge_and_clone_mutation_probability 0
+# split_edge_mutation_probability is the remainder
+
+#  --- for the fixation process
+choose_parent_first true #false
+residentFitness 1
+mutantFitness 1.2 #1.1
+# mutantFitness 0.9 # less than resident to select for drift
+max_n_vertices_for_matrix 15
+animate_fixation false
+animate_estimates false
+record_fixation_dynamics true
+timesToTestFixation 1000#300 #10000
+maxStepsToFixation 10000000 #1000 * init_n_vertices
+
+perturbed_mutant_fitness 1.201
+
+# for BoostDotGraphDisplay
+update_only_on_network_change true

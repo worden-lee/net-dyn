@@ -1,0 +1,14 @@
+swarming_pattern STATIC_LATTICE
+lattice_dimensions 2
+lattice_dim_generic 6
+#lattice_dim0 10
+#lattice_dim1 10
+#lattice_dim2 10
+lattice_neighbor_distance 1
+n_individuals 10
+lattice_is_torus true
+
+experiment OPTIMIZE
+
+print_stuff true
+animate_optimization true

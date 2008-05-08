@@ -1,0 +1,18 @@
+experiment SENSITIVITY
+perturbed_mutant_fitness 1.21
+monte_carlo_selection_accuracy 0.001
+
+initial_graph_type PLOD
+
+n_vertices 40
+pl_alpha 1.5
+pl_beta 1000
+
+#n_vertices 20
+#pl_alpha 1.5
+#pl_beta  300
+
+#n_vertices 400
+#pl_alpha 1.5
+#pl_beta  10000
+#monte_carlo_selection_accuracy 0.03

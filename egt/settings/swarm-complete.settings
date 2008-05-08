@@ -1,0 +1,5 @@
+swarming_pattern NETWORK
+initial_graph_type COMPLETE
+n_rooms 5
+n_individuals 6
+n_mobile 1

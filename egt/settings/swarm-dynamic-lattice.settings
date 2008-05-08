@@ -1,0 +1,13 @@
+swarming_pattern DYNAMIC_LATTICE
+#lattice_width 10
+#lattice_height 10
+lattice_dim0 10
+lattice_dim1 10
+lattice_dim2 10
+lattice_neighbor_distance 2
+n_individuals 20
+lattice_move_probability 0.5
+experiment SAMPLE
+
+print_stuff true
+animate_optimization true
