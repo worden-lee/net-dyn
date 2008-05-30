@@ -1,7 +1,8 @@
 VXLDIR = ../vxl
 ESTRDIR = ../libexecstream
-CFLAGS=-g -pg -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(ESTRDIR)
-LDFLAGS=$(ESTRDIR)/exec-stream.o -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
+# add -pg for profiling
+CFLAGS=-g -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(VXLDIR)/v4p/netlib -I$(ESTRDIR)
+LDFLAGS=$(ESTRDIR)/exec-stream.o -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -L$(VXLDIR)/lib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
 
 # enable to use compiler optimization
 OPTIMIZE=yes

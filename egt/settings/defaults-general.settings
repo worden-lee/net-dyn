@@ -8,6 +8,7 @@ displayEvery 0
 scrollingWindow 10000000
 gnuplotCommand gnuplot
 ghostviewCommand gv
+ghostviewUpdateStrategy signal
 
 print_stuff true
 

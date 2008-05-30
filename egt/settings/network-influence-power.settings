@@ -1,6 +1,7 @@
 experiment SENSITIVITY
 perturbed_mutant_fitness 1.21
 monte_carlo_selection_accuracy 0.001
+#monte_carlo_selection_accuracy 0.01
 
 initial_graph_type PLOD
 

@@ -93,6 +93,10 @@ main(int argc, char **argv)
 
   // ===== do the work =====
 
+ #define SENSITIVITY_ONLY // this $@#($ takes hours to compile
+			  // needs to be split into multiple executables
+			  // here, to disable a bunch of it
+ #ifdef SENSITIVITY_ONLY
   if (parameters.experiment() == "OPTIMIZE")
   { if (parameters.print_stuff())
     { cout << "moran probability: "
@@ -274,7 +278,9 @@ main(int argc, char **argv)
       }
     }
   }
-  else if (parameters.experiment() == "SENSITIVITY")
+  else 
+#endif//SENSITIVITY_ONLY
+  if (parameters.experiment() == "SENSITIVITY")
     // sensitivity of fixation probability to fitness at each vertex
   { if (parameters.n_vertices() < 0) // skip it for now
     { typedef analytic_selection_indicator<network_t,ParamsClass> aind_t;
