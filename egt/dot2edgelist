@@ -1,0 +1,28 @@
+#!/usr/bin/perl
+# read in a .dot file and output a .edgelist file
+# pretty simple
+
+# comm. line options
+my($infile,$outfile);
+
+while (@ARGV)
+{
+  my $arg = shift ARGV;
+  if ($arg =~ /^-o$/)
+  { $outfile = shift ARGV;
+    $dbg && print "output to $outfile\n";
+  }
+  else
+  { $infile = $arg;
+    $dbg && print "read from $infile\n";
+  }
+}
+
+open IN, "<$infile"
+  or die "couldn't open $infile for writing";
+
+open OUT, ">$outfile"
+  or die "couldn't open $outfile for writing";
+
+while(<IN>)
+{ /(.*)->([^[]*)/ && print OUT "$1 $2\n"; }

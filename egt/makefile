@@ -23,6 +23,15 @@ SWSRC = swarming.cpp  \
 	TimeSeriesDisplay.cpp GnuplotDisplay.cpp Parameters.cpp
 SWOBJ = $(SWSRC:.cpp=.o)
 
+analyse-net : analyse-net.c
+	$(CC) $(CFLAGS) -ligraph $< -o $@ 
+
+%/betweenness.csv : %/dot/1.edgelist ./analyse-net
+	./analyse-net $< $@
+
+%.edgelist : %.dot ./dot2edgelist
+	./dot2edgelist $*.dot -o $@
+
 # %.o : %.cpp
 # 	$(CXX) $(CFLAGS) $(CXXFLAGS) $< -c -o $@
 
