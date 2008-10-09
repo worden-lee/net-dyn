@@ -1,46 +1,64 @@
 # source("load-nodes.r")
 
-nodes15 <- read.table("batch-data/network-influence-power/out.15/nodes.csv",sep=",",header=TRUE)
-nodes26 <- read.table("batch-data/network-influence-power/out.26/nodes.csv",sep=",",header=TRUE)
-nodes27 <- read.table("batch-data/network-influence-power/out.27/nodes.csv",sep=",",header=TRUE)
-nodes30 <- read.table("batch-data/network-influence-power/out.30/nodes.csv",sep=",",header=TRUE)
-nodes36 <- read.table("batch-data/network-influence-power/out.36/nodes.csv",sep=",",header=TRUE)
-nodes45 <- read.table("batch-data/network-influence-power/out.45/nodes.csv",sep=",",header=TRUE)
-nodes46 <- read.table("batch-data/network-influence-power/out.46/nodes.csv",sep=",",header=TRUE)
-nodes47 <- read.table("batch-data/network-influence-power/out.47/nodes.csv",sep=",",header=TRUE)
-nodes67 <- read.table("batch-data/network-influence-power/out.67/nodes.csv",sep=",",header=TRUE)
-nodes71 <- read.table("batch-data/network-influence-power/out.71/nodes.csv",sep=",",header=TRUE)
-nodes72 <- read.table("batch-data/network-influence-power/out.72/nodes.csv",sep=",",header=TRUE)
-nodes79 <- read.table("batch-data/network-influence-power/out.79/nodes.csv",sep=",",header=TRUE)
+relative <- function(vec)
+{ vec / (sum(vec)/length(vec)) }
 
-betweenness15 <- read.table("batch-data/network-influence-power/out.15/betweenness.csv",sep=",",header=TRUE)
-betweenness26 <- read.table("batch-data/network-influence-power/out.26/betweenness.csv",sep=",",header=TRUE)
-betweenness27 <- read.table("batch-data/network-influence-power/out.27/betweenness.csv",sep=",",header=TRUE)
-betweenness30 <- read.table("batch-data/network-influence-power/out.30/betweenness.csv",sep=",",header=TRUE)
-betweenness36 <- read.table("batch-data/network-influence-power/out.36/betweenness.csv",sep=",",header=TRUE)
-betweenness45 <- read.table("batch-data/network-influence-power/out.45/betweenness.csv",sep=",",header=TRUE)
-betweenness46 <- read.table("batch-data/network-influence-power/out.46/betweenness.csv",sep=",",header=TRUE)
-betweenness47 <- read.table("batch-data/network-influence-power/out.47/betweenness.csv",sep=",",header=TRUE)
-betweenness67 <- read.table("batch-data/network-influence-power/out.67/betweenness.csv",sep=",",header=TRUE)
-betweenness71 <- read.table("batch-data/network-influence-power/out.71/betweenness.csv",sep=",",header=TRUE)
-betweenness72 <- read.table("batch-data/network-influence-power/out.72/betweenness.csv",sep=",",header=TRUE)
-betweenness79 <- read.table("batch-data/network-influence-power/out.79/betweenness.csv",sep=",",header=TRUE)
-network15 <- cbind(nodes15,betweenness15)
-network26 <- cbind(nodes26,betweenness26)
-network27 <- cbind(nodes27,betweenness27)
-network30 <- cbind(nodes30,betweenness30)
-network36 <- cbind(nodes36,betweenness36)
-network45 <- cbind(nodes45,betweenness45)
-network46 <- cbind(nodes46,betweenness46)
-network47 <- cbind(nodes47,betweenness47)
-network67 <- cbind(nodes67,betweenness67)
-network71 <- cbind(nodes71,betweenness71)
-network72 <- cbind(nodes72,betweenness72)
-network79 <- cbind(nodes79,betweenness79)
+#nodes4 <- read.table("batch-data/network-influence-power/out/out/nodes.csv.~4~",sep=",",header=TRUE)
+#nodes4$dp.dr.i. <- relative(nodes4$dp.dr.i.)
 
-allnetworks <- rbind(network15, network26, network27, network30, network36,
-	network45, network46, network47, network67, network71, 
-	network72, network79)
+nodes.15 <- read.table("batch-data/network-influence-power/out.15/nodes.csv",sep=",",header=TRUE)
+nodes.15$dp.dr.i. <- relative(nodes.15$dp.dr.i.)
+nodes.26 <- read.table("batch-data/network-influence-power/out.26/nodes.csv",sep=",",header=TRUE)
+nodes.26$dp.dr.i. <- relative(nodes.26$dp.dr.i.)
+nodes.27 <- read.table("batch-data/network-influence-power/out.27/nodes.csv",sep=",",header=TRUE)
+nodes.27$dp.dr.i. <- relative(nodes.27$dp.dr.i.)
+nodes.30 <- read.table("batch-data/network-influence-power/out.30/nodes.csv",sep=",",header=TRUE)
+nodes.30$dp.dr.i. <- relative(nodes.30$dp.dr.i.)
+nodes.36 <- read.table("batch-data/network-influence-power/out.36/nodes.csv",sep=",",header=TRUE)
+nodes.36$dp.dr.i. <- relative(nodes.36$dp.dr.i.)
+nodes.45 <- read.table("batch-data/network-influence-power/out.45/nodes.csv",sep=",",header=TRUE)
+nodes.45$dp.dr.i. <- relative(nodes.45$dp.dr.i.)
+nodes.46 <- read.table("batch-data/network-influence-power/out.46/nodes.csv",sep=",",header=TRUE)
+nodes.46$dp.dr.i. <- relative(nodes.46$dp.dr.i.)
+nodes.47 <- read.table("batch-data/network-influence-power/out.47/nodes.csv",sep=",",header=TRUE)
+nodes.47$dp.dr.i. <- relative(nodes.47$dp.dr.i.)
+nodes.67 <- read.table("batch-data/network-influence-power/out.67/nodes.csv",sep=",",header=TRUE)
+nodes.67$dp.dr.i. <- relative(nodes.67$dp.dr.i.)
+nodes.71 <- read.table("batch-data/network-influence-power/out.71/nodes.csv",sep=",",header=TRUE)
+nodes.71$dp.dr.i. <- relative(nodes.71$dp.dr.i.)
+nodes.72 <- read.table("batch-data/network-influence-power/out.72/nodes.csv",sep=",",header=TRUE)
+nodes.72$dp.dr.i. <- relative(nodes.72$dp.dr.i.)
+nodes.79 <- read.table("batch-data/network-influence-power/out.79/nodes.csv",sep=",",header=TRUE)
+nodes.79$dp.dr.i. <- relative(nodes.79$dp.dr.i.)
+
+betweenness.15 <- read.table("batch-data/network-influence-power/out.15/betweenness.csv",sep=",",header=TRUE)
+betweenness.26 <- read.table("batch-data/network-influence-power/out.26/betweenness.csv",sep=",",header=TRUE)
+betweenness.27 <- read.table("batch-data/network-influence-power/out.27/betweenness.csv",sep=",",header=TRUE)
+betweenness.30 <- read.table("batch-data/network-influence-power/out.30/betweenness.csv",sep=",",header=TRUE)
+betweenness.36 <- read.table("batch-data/network-influence-power/out.36/betweenness.csv",sep=",",header=TRUE)
+betweenness.45 <- read.table("batch-data/network-influence-power/out.45/betweenness.csv",sep=",",header=TRUE)
+betweenness.46 <- read.table("batch-data/network-influence-power/out.46/betweenness.csv",sep=",",header=TRUE)
+betweenness.47 <- read.table("batch-data/network-influence-power/out.47/betweenness.csv",sep=",",header=TRUE)
+betweenness.67 <- read.table("batch-data/network-influence-power/out.67/betweenness.csv",sep=",",header=TRUE)
+betweenness.71 <- read.table("batch-data/network-influence-power/out.71/betweenness.csv",sep=",",header=TRUE)
+betweenness.72 <- read.table("batch-data/network-influence-power/out.72/betweenness.csv",sep=",",header=TRUE)
+betweenness.79 <- read.table("batch-data/network-influence-power/out.79/betweenness.csv",sep=",",header=TRUE)
+network.15 <- cbind(nodes.15,betweenness.15)
+network.26 <- cbind(nodes.26,betweenness.26)
+network.27 <- cbind(nodes.27,betweenness.27)
+network.30 <- cbind(nodes.30,betweenness.30)
+network.36 <- cbind(nodes.36,betweenness.36)
+network.45 <- cbind(nodes.45,betweenness.45)
+network.46 <- cbind(nodes.46,betweenness.46)
+network.47 <- cbind(nodes.47,betweenness.47)
+network.67 <- cbind(nodes.67,betweenness.67)
+network.71 <- cbind(nodes.71,betweenness.71)
+network.72 <- cbind(nodes.72,betweenness.72)
+network.79 <- cbind(nodes.79,betweenness.79)
+
+allnetworks <- rbind(network.15, network.26, network.27, network.30, network.36,
+	network.45, network.46, network.47, network.67, network.71, 
+	network.72, network.79)
 
 stars <- function(p)
 { if(p < 0.001) {
@@ -56,67 +74,78 @@ stars <- function(p)
   }
 }
 
-doplot <- function(xv, yv, filename, xlabelpos, ylabelpos)
+doplot <- function(xv, yv, filename, xlab, xlabelpos, ylabelpos)
 {
-  plot(xv,yv)
+  plot(xv,yv,xlab=xlab,ylab="influence")
   lm <- lm(yv ~ xv)
   lms <- summary(lm)
-  abline(lm,col="blue")
-  text(xlabelpos,ylabelpos,
-	sprintf("r-squared=%g\nslope=%g\nstd.err(slope)=%g\np=%g %s",
-	lms$r.squared, lms$coefficients[2,1], lms$coefficients[2,2],
-	lms$coefficients[2,4], stars(lms$coefficients[2,4])),
-	pos=4)
-#  dev.copy2eps(file=filename)
-#  dev.off()
+  abline(lm,col="red")
+#  lines=sprintf("r-squared=%g\nslope=%g\nstd.err(slope)=%g\np=%g %s",
+#    lms$r.squared, lms$coefficients[2,1],
+#    lms$coefficients[2,2],
+#    lms$coefficients[2,4], stars(lms$coefficients[2,4]))
+# --
+#  lines=sprintf("slope=%g\nstd.err(slope)=%g\nr-squared=%g",
+#    lms$coefficients[2,1], lms$coefficients[2,2], lms$r.squared)
+  lines=sprintf("coefficient=%g %s\nstd. error=%g\nr-squared=%g",
+    lms$coefficients[2,1], stars(lms$coefficients[2,4]),
+    lms$coefficients[2,2], lms$r.squared)
+  text(xlabelpos,ylabelpos, lines, pos=4)
+  dev.copy2eps(file=filename)
+  dev.off()
 }
 
-doplot(network26$in.degree,network26$dp.dr.i.,
-	"out-26.influence.v.indegree.eps",0.28,0.033)
+doplot(network.26$in.degree,network.26$dp.dr.i.,
+       "out-26.influence.v.indegree.eps","in-degree",0.28,1.8)
 
-doplot(network26$out.degree,network26$dp.dr.i.,
-	"out-26.influence.v.outdegree.eps",2.5,0.0045)
+doplot(network.26$out.degree,network.26$dp.dr.i.,
+	"out-26.influence.v.outdegree.eps","out-degree",2.5,0.2)
 
-doplot(network26$temperature,network26$dp.dr.i.,
-	"out-26.influence.v.temperature.eps",0,0.033)
+doplot(network.26$temperature,network.26$dp.dr.i.,
+	"out-26.influence.v.temperature.eps","temperature",-0.01,1.8)
 
-doplot(network26$in.closeness,network26$dp.dr.i.,
-	"out-26.influence.v.incloseness.eps",0.28,0.033)
+doplot(network.26$in.closeness,network.26$dp.dr.i.,
+	"out-26.influence.v.incloseness.eps","in-closeness",0.27,1.8)
 
-doplot(network26$out.closeness,network26$dp.dr.i.,
-	"out-26.influence.v.outcloseness.eps",0.35,0.0045)
+doplot(network.26$out.closeness,network.26$dp.dr.i.,
+	"out-26.influence.v.outcloseness.eps","out-closeness",0.35,0.2)
 
-doplot(network26$betweenness,network26$dp.dr.i.,
-	"out-26.influence.v.betweenness.eps",0.28,0.033)
+doplot(network.26$betweenness,network.26$dp.dr.i.,
+	"out-26.influence.v.betweenness.eps","betweenness",-5,1.8)
 
-doplot(network26$undirected.eigenvector.centrality,network26$dp.dr.i.,
-	"out-26.influence.v.betweenness.eps",0.045,0.033)
+doplot(network.26$undirected.eigenvector.centrality,network.26$dp.dr.i.,
+       "out-26.influence.v.eigenvector.centrality.eps",
+       "eigenvector centrality (undirected)",0.045,1.8)
 	
-doplot(network26$pagerank,network26$dp.dr.i.,
-	"out-26.influence.v.pagerank.eps",0.002,0.033)
+doplot(network.26$pagerank,network.26$dp.dr.i.,
+	"out-26.influence.v.pagerank.eps","pagerank",0.002,1.8)
 
 
 doplot(allnetworks$in.degree,allnetworks$dp.dr.i.,
-	"all.influence.v.indegree.eps",0.28,0.033)
+	"all.influence.v.indegree.eps","in-degree",0.28,1.8)
 
 doplot(allnetworks$out.degree,allnetworks$dp.dr.i.,
-	"all.influence.v.outdegree.eps",2.1,0.033)
+	"all.influence.v.outdegree.eps","out-degree",2.1,1.8)
 
 doplot(allnetworks$temperature,allnetworks$dp.dr.i.,
-	"all.influence.v.temperature.eps",0.28,0.033)
+	"all.influence.v.temperature.eps","temperature",-0.01,1.8)
 
 doplot(allnetworks$in.closeness,allnetworks$dp.dr.i.,
-	"all.influence.v.incloseness.eps",0.27,0.033)
+	"all.influence.v.incloseness.eps","in-closeness",0.27,1.8)
 
 doplot(allnetworks$out.closeness,allnetworks$dp.dr.i.,
-	"all.influence.v.outcloseness.eps",0.35,0.033)
+	"all.influence.v.outcloseness.eps","out-closeness",0.62,1.8)
 
 doplot(allnetworks$betweenness,allnetworks$dp.dr.i.,
-	"all.influence.v.betweenness.eps",0,0.033)
+	"all.influence.v.betweenness.eps","betweenness",-5,1.8)
 
 doplot(allnetworks$undirected.eigenvector.centrality,allnetworks$dp.dr.i.,
-	"all.influence.v.betweenness.eps",0.02,0.033)
+       "all.influence.v.eigenvector.centrality.eps",
+       "eigenvector centrality (undirected)",0.02,1.8)
 
 doplot(allnetworks$pagerank,allnetworks$dp.dr.i.,
-	"all.influence.v.pagerank.eps",0.002,0.033)
+       "all.influence.v.pagerank.eps","pagerank",0.002,1.8)
+
+doplot(allnetworks$constraint,allnetworks$dp.dr.i.,
+       "all.influence.v.constraint.eps","Burt's constraint",0.2,1.8)
 

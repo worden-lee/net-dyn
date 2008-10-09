@@ -1,0 +1,13 @@
+experiment SAMPLE # OPTIMIZE
+initial_graph_type POWER
+
+n_vertices 8 # 40 # 400 # 150
+
+graph_density 1
+pl_in_exp 1.5
+pl_out_exp 2
+
+animate_estimates true # false
+
+#monte_carlo_selection_accuracy 0.004
+require_strongly_connected TRUE

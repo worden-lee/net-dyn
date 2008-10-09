@@ -26,7 +26,7 @@
 //  mutant_fitness
 //  resident_fitness
 //  perturbed_mutant_fitness
-//  desired_accuracy
+//  monte_carlo_selection_accuracy
 
 template<typename network_t, typename RNG_t, typename params_t>
 class sensitivity_simulation
@@ -40,7 +40,7 @@ class sensitivity_simulation
 
   // these represent the "logical clauses" discussed in the wiki.
   // store one of these per node, instead of just a boolean for
-  // resident or mutant.
+  // resident vs. mutant.
   class node_state
   {
   public:
@@ -73,7 +73,7 @@ class sensitivity_simulation
     bool value(vertex_descriptor perturbed=-1)
     { if (is_T) return true;
       else if (is_F) return false;
-      else if (perturbed == -1) // == because it's probably unsigned
+      else if (perturbed == -1) // not <0 because it's probably unsigned
         return false;
       else
         //return (nodelist.count(perturbed) > 0);
@@ -153,7 +153,7 @@ public:
   public:
     bool finished; // short-term: has this case come to fix/ext this
                    // time thru
-    bool current_state; // even shorter term:
+    bool current_state; // even shorter term
     bool mixed;         // used while checking for fix/ext
     track_case_t() : finished(false) {}
   };
@@ -163,8 +163,7 @@ public:
 
   sensitivity_simulation(RNG_t&_rng, params_t*_params)
     : selind_t(_rng,_params)
-  { //inheritParametersFrom(_params);
-  }
+  {}
 
   void do_simulation(const network_t &n);
 };
@@ -204,8 +203,8 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
 
   // there is one baseline case and nv perturbed cases.
   // we need to track all of them watching for fixation/extinction.
-  // here the long-term fixation record, and a bool for whether it's
-  // done in the current run.
+  // here the fixation record for the baseline case, and a bool for
+  // whether it's done in the current run.
   track_case_t track_baseline;
   // have to change this collection if vertex_descriptor isn't
   // unsigned int.
@@ -228,7 +227,7 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
   //influence_display.setdisplayEvery(1000);
   influence_display.setupdate_only_on_network_change(false);
 #endif
-  // random variable for reuse
+  // random variable "xi" for reuse
   ur_t choose_xi(rng,uniform_real<>(0,rp));
 
   // do runs until accuracy is guaranteed small enough.

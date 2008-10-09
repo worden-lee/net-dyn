@@ -12,7 +12,8 @@
  *
  *  Example by 					Walter de Back, Collegium Budapest, Hungary
 
- *  Modified by Lee Worden to input an edgelist rather than Pajek file, and to output to a csv file.
+ *  Modified by Lee Worden to input an edgelist rather than Pajek
+ *  file, and to output to a csv file; plus more calculations than before.
 
 
  *	COMPILE: 					gcc analyse-net.c -I/usr/local/igraph -L/usr/local/lib -ligraph -o analyse-net (may need to change paths)
@@ -189,6 +190,21 @@ int main(int argc,char* argv[]){
 	}
 	*/
 
+	// Burt's CONSTRAINT (a measure of 'structural holes')
+	igraph_vector_t constraint;
+	igraph_vector_init(&constraint,0);
+	info = igraph_constraint(&graph, &constraint, igraph_vss_all(), NULL);
+	if(info!=0)		
+	{ puts("ERROR occured during constraint!");
+	  exit(-1);
+	}
+	/*
+	printf("\nCONSTRAINT \n");		
+	for(i=0;i<igraph_vector_size(&constraint);i++){
+		printf("%d %10f\n",i,igraph_vector_e(&constraint,i));		
+	}
+	*/
+
 	// KLEINBERG HUB SCORE
 	igraph_vector_t hub_score;
 	igraph_vector_init(&hub_score,0);
@@ -213,14 +229,19 @@ int main(int argc,char* argv[]){
 	FILE *csv = fopen(outfile, "w");
 	if(graphfile!=NULL)
 	{
-	  fputs("in.closeness,out.closeness,betweenness,undirected.eigenvector.centrality,pagerank,"
-		"hub.score,authority.score\n",
+	  fputs("in.closeness,out.closeness,betweenness,"
+                "undirected.eigenvector.centrality,pagerank,"
+		"constraint,hub.score,authority.score\n",
 		csv);
 	  for(i=0;i<num_vertices;i++)
-	  { fprintf(csv, "%g,%g,%g,%g,%g,%g,%g\n", igraph_vector_e(&in_closeness,i),
-		    igraph_vector_e(&out_closeness,i), igraph_vector_e(&betweenness,i),
-		    absolute(igraph_vector_e(&und_eigen,i)), igraph_vector_e(&pagerank,i),
-		    absolute(igraph_vector_e(&hub_score,i)),
+	  { fprintf(csv, "%g,%g,%g,%g,%g,%g,%g,%g\n",
+                    igraph_vector_e(&in_closeness,i),
+		    igraph_vector_e(&out_closeness,i),
+                    igraph_vector_e(&betweenness,i),
+		    absolute(igraph_vector_e(&und_eigen,i)),
+                    igraph_vector_e(&pagerank,i),
+		    igraph_vector_e(&constraint,i),
+                    absolute(igraph_vector_e(&hub_score,i)),
 		    absolute(igraph_vector_e(&authority_score,i)));
 	  }
 	}
@@ -236,6 +257,7 @@ int main(int argc,char* argv[]){
 	igraph_vector_destroy(&betweenness);
 	igraph_vector_destroy(&und_eigen);
 	igraph_vector_destroy(&pagerank);
+	igraph_vector_destroy(&constraint);
 	igraph_vector_destroy(&hub_score);
 	igraph_vector_destroy(&authority_score);
 	igraph_destroy(&graph);

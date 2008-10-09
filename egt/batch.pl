@@ -7,7 +7,8 @@ my $pwd = `pwd`;
 chomp($pwd);
 # parameters are compiled into the program, so this is awkward for now.
 # set this to match what's compiled in, we can improve it later.
-my $outdir = "$pwd/batch-data/network-influence-power";
+my $experiment = "network-power-sample";
+my $outdir = "$pwd/batch-data/$experiment";
 
 if (!-e $outdir)
 { mkpath($outdir) or die "couldn't create $outdir";
@@ -16,10 +17,12 @@ if (!-e $outdir)
 }
 
 for my $i (1 .. $reps)
-{ if (!-e "out") { mkdir("out") or die "couldn't mkdir out"; }
+{ my($dest) = "$outdir/out.$i";
+  next if (-e $dest);
+  if (!-e "out") { mkdir("out") or die "couldn't mkdir out"; }
   system("rm -rf out/*");
-  my $comm = "./network-optimize -f settings/network-influence-power.settings";
+  my $comm = "./network-optimize -f settings/$experiment.settings";
   system($comm) == 0 or die "error running $comm";
-  $comm = "cp -r --force --backup=numbered out/ $outdir/out.$i";
+  $comm = "cp -r --force --backup=numbered out/ $dest";
   system($comm) == 0 or die "error running $comm";
 }

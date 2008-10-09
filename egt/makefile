@@ -1,8 +1,9 @@
+NETDYNDIR = ../net-dyn-lib
 VXLDIR = ../vxl
 ESTRDIR = ../libexecstream
 # add -pg for profiling
-CFLAGS=-g -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(VXLDIR)/v4p/netlib -I$(ESTRDIR)
-LDFLAGS=$(ESTRDIR)/exec-stream.o -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -L$(VXLDIR)/lib -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
+CFLAGS=-g -I$(NETDYNDIR) -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(VXLDIR)/v4p/netlib -I$(ESTRDIR)
+LDFLAGS=-L$(NETDYNDIR) -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -L$(VXLDIR)/lib $(ESTRDIR)/exec-stream.o -lnet-dyn -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
 
 # enable to use compiler optimization
 OPTIMIZE=yes
@@ -15,13 +16,20 @@ default: network-optimize
 
 over: clean default
 
-NOSRC = network-optimize.cpp \
-	TimeSeriesDisplay.cpp GnuplotDisplay.cpp Parameters.cpp
-NOOBJ = $(NOSRC:.cpp=.o)
+SRCS = network-optimize.cpp network-sample.cpp swarming.cpp sensitivity.cpp analyse-net.c
+_OINT = $(SRCS:.cpp=.o)
+OBJS = $(_OINT:.c=.o)
 
-SWSRC = swarming.cpp  \
-	TimeSeriesDisplay.cpp GnuplotDisplay.cpp Parameters.cpp
-SWOBJ = $(SWSRC:.cpp=.o)
+NETDYNLIB = $(NETDYNDIR)/libnet-dyn.a
+
+$(NETDYNLIB) :
+	(cd $(NETDYNDIR) && $(MAKE))
+
+sensitivity : sensitivity.o
+	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
+
+network-sample : network-sample.o
+	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
 
 analyse-net : analyse-net.c
 	$(CC) $(CFLAGS) -ligraph $< -o $@ 
@@ -43,18 +51,14 @@ analyse-net : analyse-net.c
 	        -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	    rm -f $*.d
 
-NODEP = $(NOOBJ:.o=.P)
+DEPS = $(OBJS:.o=.P)
 
--include $(NODEP)
+-include $(DEPS)
 
-SWDEP = $(SWOBJ:.o=.P)
-
--include $(SWDEP)
-
-network-optimize : $(NOOBJ)
+network-optimize : $(NOOBJ) $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $(NOOBJ) $(LDFLAGS)
 
-swarming : $(SWOBJ)
+swarming : $(SWOBJ) $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $(SWOBJ) $(LDFLAGS)
 
 clean:

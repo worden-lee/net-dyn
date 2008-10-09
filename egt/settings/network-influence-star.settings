@@ -24,3 +24,8 @@ monte_carlo_selection_accuracy 0.04
 
 monte_carlo_selection_accuracy 0.01
 
+# never mind all the above settings, match the power law experiment
+include settings/network-influence-power.settings
+initial_graph_type STAR
+# can't do the full-size graph
+n_vertices 11
