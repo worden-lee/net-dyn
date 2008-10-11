@@ -35,10 +35,13 @@ for my $i (1 .. $reps)
         join("", map {" --$_" } @extra_args);
       print "$comm\n";
       system($comm) == 0 or die "error running $comm";
-      if (!-e $catdir) { mkpath($catdir) or die "couldn't create $catdir"; }
-      $comm = "cp -r --force --backup=numbered out/ $dest";
-      print "$comm\n";
-      system($comm) == 0 or die "error running $comm";
+      ## @@ !! double check this is the right file to check for existence !!
+      if (-e "out/network.csv")
+      { if (!-e $catdir) { mkpath($catdir) or die "couldn't create $catdir"; }
+        $comm = "cp -r --force --backup=numbered out/ $dest";
+        print "$comm\n";
+        system($comm) == 0 or die "error running $comm";
+      }
     }
   }
 }

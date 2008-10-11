@@ -62,15 +62,6 @@ main(int argc, char **argv)
   //n.inheritParametersFrom(parameters);
   construct_network(n,parameters,rng);
 
-  // ===== do the work =====
-
-  network_selection_indicator<network_t,rng_t,ParamsClass> sind(rng);
-  sind.inheritParametersFrom(parameters);
-  mean_fixation_time_indicator<typeof sind> ft_ind(sind);
-  mean_extinction_time_indicator<typeof sind> et_ind(sind);
-  mean_absorption_time_indicator<typeof sind> at_ind(sind);
-  mean_peak_before_extinction_indicator<typeof sind> mp_ind(sind);
-
   if (parameters.print_stuff())
   { cout << "network:\n";
     print_object(n,cout);
@@ -80,6 +71,41 @@ main(int argc, char **argv)
                               /parameters.residentFitness(),
                               parameters.n_vertices()) << '\n';
   }
+
+  // ===== do the work =====
+
+  network_selection_indicator<network_t,rng_t,ParamsClass> sind(rng);
+  sind.inheritParametersFrom(parameters);
+  mean_fixation_time_indicator<typeof sind> ft_ind(sind);
+  mean_extinction_time_indicator<typeof sind> et_ind(sind);
+  mean_absorption_time_indicator<typeof sind> at_ind(sind);
+  mean_peak_before_extinction_indicator<typeof sind> mp_ind(sind);
+
+  network_component_status status = ::test_fixation_candidate(n);
+  if (status.flag != STRONGLY_CONNECTED)
+  { cout << "graph is not strongly connected.\n";
+    exit(0);
+  }
+  else
+    cout << "graph is strongly connected." << endl;
+
+#ifdef DISPLAY
+  // picture of graph
+  BoostDotGraphController<network_t,ParamsClass> opt_animation;
+  opt_animation.inheritParametersFrom(parameters);
+  if (parameters.n_vertices() < 40)
+  { //displayfarm.installController(opt_animation);
+    opt_animation.add_vertex_property("color",
+      make_color_temperature(n));
+    //       opt_animation.add_vertex_property("fontcolor",
+    //         make_color_influence(n,indicator,parameters));
+    opt_animation.add_edge_property("style",
+      make_bool_string_property("bold","",belongs_to_a_2_loop<network_t>,n));
+    //opt_animation.params.setdisplayToScreen(
+    //  displayfarm.params.animate_optimization());
+    opt_animation.update(0,n);
+  }
+#endif
   double fixp = sind(n);
   network_selection_indicator<network_t,rng_t,ParamsClass>::fixation_stats
     &cache = sind.provide_stats(n);
@@ -97,19 +123,21 @@ main(int argc, char **argv)
     }
   }
 
-  // record the results
-  CSVDisplay network_csv(parameters.outputDirectory()+"/network.csv");
-  // record other measures like mu_{-1} ?
-  network_csv << "nv" << "in_exp" << "out_exp" << "density" << "mutuality"
-              << "p" << "accuracy" << "moran_probability";
-  network_csv.newRow();
-  network_csv << parameters.n_vertices() << parameters.pl_in_exp()
-              << parameters.pl_out_exp() << density(n) << mutuality_ind(n)
-              << fixp << cache.fixation_accuracy()
-              << moran_probability(parameters.mutantFitness()
-                                   /parameters.residentFitness(),
-                                   parameters.n_vertices());
-  network_csv.newRow();
+  if (fixp > 0)
+  { // record the results
+    CSVDisplay network_csv(parameters.outputDirectory()+"/network.csv");
+    // record other measures like mu_{-1} ?
+    network_csv << "nv" << "in_exp" << "out_exp" << "density" << "mutuality"
+                << "p" << "accuracy" << "moran_probability";
+    network_csv.newRow();
+    network_csv << parameters.n_vertices() << parameters.pl_in_exp()
+                << parameters.pl_out_exp() << density(n) << mutuality_ind(n)
+                << fixp << cache.fixation_accuracy()
+                << moran_probability(parameters.mutantFitness()
+                                     /parameters.residentFitness(),
+                                     parameters.n_vertices());
+    network_csv.newRow();
+  }
 
   return 0;
 }

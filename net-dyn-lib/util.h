@@ -136,7 +136,7 @@ inline const char *fstring(const char*fmt,...)
 }
 
 #include "string"
-inline string stringf(char*fmt,...)
+inline string stringf(const char*fmt,...)
 {
   va_list va;
   va_start(va,fmt);

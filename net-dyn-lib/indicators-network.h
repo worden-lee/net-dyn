@@ -802,7 +802,7 @@ public:
     switch(status.flag)
     {
     case STRONGLY_CONNECTED:
-      cout << "strongly connected\n";
+      //cout << "strongly connected\n";
       return false;
     case DISCONNECTED:
     case MULTIPLE_SOURCE_COMPONENTS:
@@ -1010,21 +1010,6 @@ public:
 #ifdef DISPLAY
     // devices for animating the fixation process
     bool animate = params.animate_fixation();
-
-    // picture of graph
-    BoostDotGraphController<network_t,ParamsClass> opt_animation;
-    if (params.n_vertices() < 40)
-    { //displayfarm.installController(opt_animation);
-      opt_animation.add_vertex_property("color",
-        make_color_temperature(n));
-      //       opt_animation.add_vertex_property("fontcolor",
-      //         make_color_influence(n,indicator,parameters));
-      opt_animation.add_edge_property("style",
-        make_bool_string_property("bold","",belongs_to_a_2_loop<network_t>,n));
-      //opt_animation.params.setdisplayToScreen(
-      //  displayfarm.params.animate_optimization());
-      opt_animation.update(0,n);
-    }
     // running count of infected vertices
     IndicatorsDisplayController<network_t,ParamsClass> fixationDisplay;
     fixationDisplay.inheritParametersFrom(params);

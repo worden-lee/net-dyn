@@ -1,13 +1,17 @@
-experiment SAMPLE # OPTIMIZE
+experiment SAMPLE
 initial_graph_type POWER
 
-n_vertices 8 # 40 # 400 # 150
+n_vertices 40 # 8 # 400 # 150
 
 graph_density 1
-pl_in_exp 1.5
-pl_out_exp 2
+#pl_in_exp 1.5
+#pl_out_exp 2
 
-animate_estimates true # false
+animate_estimates false # true
 
+timesToTestFixation 40000
 #monte_carlo_selection_accuracy 0.004
-require_strongly_connected TRUE
+require_strongly_connected true
+
+# to disable ghostview popcorn
+ghostviewCommand=/bin/true

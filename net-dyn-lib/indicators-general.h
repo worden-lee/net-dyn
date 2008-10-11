@@ -368,6 +368,7 @@ double moran_probability(double r, double n)
 { return (1 - 1/r) / (1 - pow(r,-n));
 }
 
+#include "boost/property_map.hpp"
 //this is modeled after boost's identity_property_map
 // it can, for instance, assign weight 1 to all edges,
 // which is necessary in finding shortest paths
