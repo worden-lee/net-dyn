@@ -90,10 +90,10 @@ main(int argc, char **argv)
     cout << "graph is strongly connected." << endl;
 
 #ifdef DISPLAY
-  // picture of graph
+  // plot a picture of the graph
   BoostDotGraphController<network_t,ParamsClass> opt_animation;
   opt_animation.inheritParametersFrom(parameters);
-  if (parameters.n_vertices() < 40)
+  if (parameters.n_vertices() < 50) // 40
   { //displayfarm.installController(opt_animation);
     opt_animation.add_vertex_property("color",
       make_color_temperature(n));

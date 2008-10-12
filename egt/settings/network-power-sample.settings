@@ -14,4 +14,4 @@ timesToTestFixation 40000
 require_strongly_connected true
 
 # to disable ghostview popcorn
-ghostviewCommand=/bin/true
+ghostviewCommand /bin/true
