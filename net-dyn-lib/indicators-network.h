@@ -476,23 +476,6 @@ public:
 bool indicator_is_stochastic(moran_indicator&mind)
 { return false; }
 
-#if 0
-template<typename network_t, typename RNG_t>
-class selection_indicator_fixed_origin
-  : public selection_indicator<network_t, RNG_t>
-{
-public:
-  selection_indicator_fixed_origin
-    (typename graph_traits<network_t>::vertex_descriptor v, RNG_t _rng)
-    : origin(v), selection_indicator<network_t,RNG_t>(_rng) {}
-  bool do_one_fixation(const network_t&n)
-  { return fixation_once(n,origin);
-  }
-protected:
-  typename graph_traits<network_t>::vertex_descriptor origin;
-};
-#endif//0
-
 // before doing fixation simulation call this to evaluate
 //  whether there's a possibility of nonzero fixation probability
 template<typename network_t>
@@ -601,6 +584,18 @@ inline bool is_connected(const VertexListGraph& g, VertexColorMap color)
 	  return false;
       }
   return true;
+}
+
+// moments of degree distribution
+// degree_moment(i,j) = sum_x in(x)^i out(x)^j / N
+template<typename network_t>
+double degree_moment(const network_t&n, int i, int j)
+{ double accum = 0;
+  typename graph_traits<network_t>::vertex_iterator 
+    vi, vi_end;
+  for (tie(vi, vi_end) = vertices(n); vi != vi_end; ++vi)
+    accum += pow(double(in_degree(*vi,n)),i)*pow(double(out_degree(*vi,n)),j);
+  return accum / num_vertices(n);
 }
 
 // functions to evaluate whether a graph is capable of fixation.
@@ -767,6 +762,17 @@ call_try_fixation(network_selection_indicator<
   // set storage in this simulation seems to be really inefficient
 }
 
+// specialized fixation_stats for network -- includes recording of
+// fixation probability as a function of starting vertex
+template<typename network_t>
+class net_fixation_stats : public fixation_stats
+{
+public:
+  typedef typename graph_traits<network_t>::vertex_descriptor vertex_descriptor;
+  typedef map<vertex_descriptor, fixation_record> fixations_by_vertex_t;
+  fixations_by_vertex_t fixations_by_vertex;    
+};
+
 #ifdef DISPLAY
 #include "BoostDotDisplay.h"
 #endif
@@ -775,13 +781,19 @@ call_try_fixation(network_selection_indicator<
 // indicators-general.h, qv.
 template<typename network_t, typename RNG_t, typename params_t>
 class network_selection_indicator
-  : public selection_indicator<network_t,RNG_t,params_t>
-{ typedef selection_indicator<network_t,RNG_t,params_t> selind;
+  : public selection_indicator<network_t,RNG_t,params_t,
+                               net_fixation_stats<network_t> >
+{ typedef selection_indicator< network_t,RNG_t,params_t,
+                               net_fixation_stats<network_t> > selind;
   using ObjectWithParameters<params_t>::params;
   using selind::currently_processing;
-  // reusable state vector for fixation simulation
-  //vector<double>statevector;
+
+  // cache parameters values for quickness in looping
+  Parameters::update_rule_t update_rule;
+  int maxsteps;
 public:
+  typedef net_fixation_stats<network_t> fixation_stats_t;
+
   network_selection_indicator(RNG_t _rng, params_t*_p=0)
     : selind(_rng,_p) {}
 
@@ -835,57 +847,27 @@ public:
   }
 
   // machinery to choose an edge to reproduce along.
-  // two cases, depending on the choose_parent_first parameter, also
-  // known as birth-death and death-birth:
-  // birth-death: choose a source vertex with probability proportional
-  //  to fitness among all vertices; then choose among all its out edges
-  //  equally
-  // death-birth: choose a target vertex among all vertices equally,
-  //  then choose among all the target's in-edges, with probability
-  //  proportional to the fitnesses of their source vertices.
+  // 3 cases, depending on the update_rule parameter:
+  // egt (aka birth-death): choose a source vertex with probability
+  //  proportional to fitness among all vertices; then choose among
+  //  all its out edges equally
+  // vm (aka death-birth): choose a target vertex with probability
+  //  inversely proportional to fitness, then choose among all its in
+  //  edges equally
+  // skye (also a death-birth process): choose a target vertex among
+  //  all vertices equally, then choose among all the target's
+  //  in-edges, with probability proportional to the fitnesses of
+  //  their source vertices.
   typedef pair<typename graph_traits<network_t>::vertex_descriptor,
 	       typename graph_traits<network_t>::vertex_descriptor>
   parent_child_pair;
 
-  // death-birth case
+  // egt case
   // don't call if there are no edges, it'll search forever
   template<typename fitness_map_t>
   parent_child_pair
-  choose_parent_child_by_child(const network_t &n, fitness_map_t&state)
-  {
-    typename network_t::vertices_size_type nv = num_vertices(n);
-    typename network_t::vertices_size_type n_infected = 0;
-    typename graph_traits<network_t>::vertex_descriptor parent, child;
-    while(1) // loop until a successful match found
-    {
-      // select a child at random
-      child = random_vertex(n,this->rng);
-      // select parent via in edges
-      typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
-      tie(pi,pend) = inv_adjacent_vertices(child,n);
-      if (pi == pend) // if child has no in edges, try again
-	continue;
-      // weighted by fitness
-      parent = choose_weighted(pi,pend,state,this->rng);
-      // sanity check
-      typename graph_traits<network_t>::edge_descriptor ed;
-      bool ed_found;
-      tie(ed,ed_found) = edge(parent,child,n);
-      if (!ed_found)
-      { cerr << "found invalid edge " << parent << ',' << child << endl;
-        continue;
-      }
-      // if we get here, we're good
-      return make_pair(parent,child);
-    }
-  }
-
-  // birth-death case
-  // don't call if there are no edges, it'll search forever
-  template<typename fitness_map_t>
-  parent_child_pair
-  choose_parent_child_by_parent(const network_t &n, double total_fitness,
-                                fitness_map_t&state)
+  choose_parent_child_egt(const network_t &n, double total_fitness,
+                          fitness_map_t&state)
   {
     typename graph_traits<network_t>::vertex_descriptor parent,child;
     while(1) // loop until a successful match found
@@ -921,6 +903,78 @@ public:
     }
   }
   
+  // skye case
+  // don't call if there are no edges, it'll search forever
+  template<typename fitness_map_t>
+  parent_child_pair
+  choose_parent_child_skye(const network_t &n, fitness_map_t&state)
+  {
+    typename network_t::vertices_size_type nv = num_vertices(n);
+    typename network_t::vertices_size_type n_infected = 0;
+    typename graph_traits<network_t>::vertex_descriptor parent, child;
+    while(1) // loop until a successful match found
+    {
+      // select a child at random
+      child = random_vertex(n,this->rng);
+      // select parent via in edges
+      typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
+      tie(pi,pend) = inv_adjacent_vertices(child,n);
+      if (pi == pend) // if child has no in edges, try again
+	continue;
+      // weighted by fitness
+      parent = choose_weighted(pi,pend,state,this->rng);
+      // sanity check
+      typename graph_traits<network_t>::edge_descriptor ed;
+      bool ed_found;
+      tie(ed,ed_found) = edge(parent,child,n);
+      if (!ed_found)
+      { cerr << "found invalid edge " << parent << ',' << child << endl;
+        continue;
+      }
+      // if we get here, we're good
+      return make_pair(parent,child);
+    }
+  }
+
+  // vm case
+  // don't call if there are no edges, it'll search forever
+  template<typename rate_map_t>
+  parent_child_pair
+  choose_parent_child_vm(const network_t &n, double total_rate,
+                         rate_map_t&rate)
+  { typename graph_traits<network_t>::vertex_descriptor parent,child;
+    while(1) // loop until a successful match found
+    { // select a parent vertex, with probability proportional to fitness
+      typename graph_traits<network_t>::vertex_iterator vi,vend;
+      tie(vi,vend) = vertices(n);
+      child = choose_weighted(vi,vend,rate,this->rng,total_rate);
+      // now choose a parent vertex, with prob. proportional to edge weight
+      //  which are all assumed to be 1
+      typename network_t::degree_size_type n_parents
+	= in_degree(parent,n);
+      typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
+      if (n_parents <= 0)
+	continue; // no out edges, start over
+      else if (n_parents == 1)
+      { tie(pi,pend) = inv_adjacent_vertices(child,n);
+        parent = *pi;
+      }
+      else
+      { ui_t choose_a_parent(this->rng,uniform_int<>(0,n_parents-1));
+        int parent_selection = choose_a_parent();
+	for(tie(pi,pend) = inv_adjacent_vertices(child,n);
+	    pi != pend; ++pi)
+	  if (parent_selection-- == 0)
+	    break;
+	if (parent_selection >= 0)
+	{ cerr << "Error finding a parent!" << endl; continue; } 
+	parent = *pi;
+      }
+      // if we get to here, we found a parent and child.
+      return make_pair(parent,child);
+    }
+  }
+  
   // assign one mutant in a resident population, simulate
   //  whether it fixates (within a given threshold of patience).
   // which place to mutate is specified by the caller, so it can either
@@ -950,7 +1004,8 @@ public:
       typedef one_of_these_things_indicator<vertex_t,double> mfi_t;
       mfi_t mfi(params.mutantFitness(),
                 pv, params.perturbed_mutant_fitness());
-      return fixation_once(n,mutation,state,rfi,mfi);
+      fixation_result res = fixation_once(n,mutation,state,rfi,mfi);
+      return res;
     }
     else // no, there's none
     { constant_indicator mfi(params.mutantFitness());
@@ -971,28 +1026,20 @@ public:
       return fixation_result(ERROR,0);
 
     // store the parameters, to speed up the inner loops
-//     double mutantFitness = params.mutantFitness();
-//     double residentFitness = params.residentFitness();
-    bool cpf = params.choose_parent_first();
+    update_rule = params.update_rule();
     int maxsteps = params.maxStepsToFixation();
 
     // initial state is all residents but one
-    //state.assign(nv,residentFitness);
     fill(state.begin(),state.end(),0);
-//     typename graph_traits<network_t>::vertex_iterator vi, vend;
-//     tie(vi,vend) = vertices(n);
-//     for_each(vi,vend,state[_1] = res_fitness_map[_1]);
-
     state[mutation] = 1;
 
     // below, we use this to map vertex to fitness
     typedef map_to_indicator<state_t> state_indicator_t;
     state_indicator_t stind(state);
     typedef switching_indicator_t<res_fitness_ind_t,
-      mut_fitness_ind_t, state_indicator_t > fitness_ind_t;
+      mut_fitness_ind_t, state_indicator_t> fitness_ind_t;
     fitness_ind_t fitness_ind(res_fitness_ind, stind, 1,
                               mut_fitness_ind);
-    indicator_to_map<fitness_ind_t> fitness_map(fitness_ind);
 
     // counter of number of infected vertices
     typename network_t::vertices_size_type n_infected = 1;
@@ -1029,7 +1076,7 @@ public:
 #endif
 
     // update raw data for histogram at each step
-    typename selind::fixation_stats &nc = selind::cache[cache_key(n)];
+    //typename selind::fixation_stats &nc = selind::cache[cache_key(n)];
     vector<int> history;
 #ifdef DISPLAY
     if(animate)
@@ -1048,15 +1095,38 @@ public:
 //         n_infected*(mutantFitness-residentFitness);
       typename graph_traits<network_t>::vertex_iterator vi, vend;
       tie(vi,vend) = vertices(n);
-      double total_fitness = accumulate_transformed(vi,vend,0.0,fitness_ind);
+      double total_rate;
 
       // choose edge for propagation
       typename graph_traits<network_t>::vertex_descriptor parent, child;
-      if (cpf)
-	tie(parent,child) = choose_parent_child_by_parent(n,total_fitness,
-                                                          fitness_map);
-      else
-	tie(parent,child) = choose_parent_child_by_child(n,fitness_map);
+      typedef relative_indicator_t<constant_indicator, fitness_ind_t>
+        inv_fitness_ind_t;
+      switch(update_rule)
+      {
+      case Parameters::EGT:
+        { indicator_to_map<fitness_ind_t> fitness_map(fitness_ind);
+          total_rate = accumulate_transformed(vi,vend,0.0,fitness_ind);
+          tie(parent,child) = choose_parent_child_egt(n,total_rate,
+                                                      fitness_map);
+        }
+        break;
+      case Parameters::VM:
+        { constant_indicator one_ind(1.0);
+          inv_fitness_ind_t inv_fitness_ind(one_ind,fitness_ind);
+          indicator_to_map<inv_fitness_ind_t> inv_fitness_map(inv_fitness_ind);
+          total_rate = accumulate_transformed(vi,vend,0.0,inv_fitness_ind);
+          tie(parent,child) = choose_parent_child_vm(n,total_rate,
+                                                     inv_fitness_map);
+        }
+        break;
+      case Parameters::SKYE:
+        { indicator_to_map<fitness_ind_t> fitness_map(fitness_ind);
+          // ?? is this really the total rate ??
+          total_rate = accumulate_transformed(vi,vend,0.0,fitness_ind);
+          tie(parent,child) = choose_parent_child_skye(n,fitness_map);
+        }
+        break;
+      }
       //cout << parent << ',' << child << ' ';
 
       // now copy the parent's state to the child.
@@ -1076,7 +1146,7 @@ public:
       // update counters
       if (n_infected > peak)
         peak = n_infected;
-      clock += 1/total_fitness;
+      clock += 1/total_rate;
       // this may be obsolete: if there's a single source, we can get
       // stuck with everything else infected.  extinction is
       // theoretically inevitable, but it can take cosmic amounts of
@@ -1132,6 +1202,19 @@ public:
 //                 _1 / ret<double>(_1 + _2));
 //       hist_display.updateDisplay(0);
 //     }
+
+    fixation_stats_t &nc = selind::cache[cache_key(n)];
+    fixation_record &vstats = nc.fixations_by_vertex[mutation];
+    switch(result.result) {
+    case FIXATION:
+      ++vstats.n_fixations;
+      break;
+    case EXTINCTION:
+      ++vstats.n_extinctions;
+      break;
+    }
+    ++vstats.n_trials;
+
     return result;
   }
 };

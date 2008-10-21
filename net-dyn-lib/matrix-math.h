@@ -262,7 +262,8 @@ protected:
   // these things must have double operator()(vertex_t)
   res_fitness_map_t res_fitness_map;
   mut_fitness_map_t mut_fitness_map;
-  bool choose_parent_first;
+  //bool choose_parent_first;
+  Parameters::update_rule_t update_rule;
 
   typedef typename graph_traits<network_t>::vertex_descriptor vertex_t;
   
@@ -275,7 +276,8 @@ public:
 /*       residentFitness(p->residentFitness()), */
 /*       mutantFitness(p->mutantFitness()), */
       res_fitness_map(_rfm), mut_fitness_map(_mfm),
-      choose_parent_first(p->choose_parent_first()) {}
+      /*choose_parent_first(p->choose_parent_first())*/
+      update_rule(p->update_rule()) {}
 
   // () called once for each state: construct that state's row in the
   // matrix, all rates and the diagonal term.
@@ -313,10 +315,15 @@ public:
   }
   double r(typename graph_traits<network_t>::edge_descriptor e,
 	   set<vertex_t> &s)
-  { if (choose_parent_first)
-      return by_parent_edge_rate(e,network,s);
-    else
-      return by_child_edge_rate(e,network,s);
+  { switch(update_rule)
+    {default:
+    case Parameters::EGT:
+      return edge_rate_egt(e,network,s);
+    case Parameters::SKYE:
+      return edge_rate_skye(e,network,s);
+    case Parameters::VM:
+      return edge_rate_vm(e,network,s);
+    }
   }
   // a state is a set recording which nodes have mutant fitness
   double node_fitness(vertex_t i, set<vertex_t> &state)
@@ -324,15 +331,15 @@ public:
       (state.count(i) > 0) ? mut_fitness_map(i) : res_fitness_map(i);
   }
   // this is the rate of the 'exponential clock' attached to edge e
-  // for parent-first process: rate(i->j) = f(i)/outdegree(i)
-  double by_parent_edge_rate(
+  // for egt process: rate(i->j) = f(i)/outdegree(i)
+  double edge_rate_egt(
            typename graph_traits<network_t>::edge_descriptor e,
            const network_t &n, set<vertex_t> &s)
   { double fi = node_fitness(source(e,n),s);
     return fi / out_degree(source(e,n),n);
   }
-  // for child-first process: rate(i->j) = f(i)/sum_{k->j}f(k)
-  double by_child_edge_rate(
+  // for skye process: rate(i->j) = f(i)/sum_{k->j}f(k)
+  double edge_rate_skye(
            typename graph_traits<network_t>::edge_descriptor e,
            const network_t &n, set<vertex_t> &s)
   { double fi = node_fitness(source(e,n),s);
@@ -342,6 +349,13 @@ public:
         ki != kend; ++ki)
       total_in_fitness += node_fitness(*ki,s);
     return fi / total_in_fitness;
+  }
+  // for vm process: rate(i->j) = 1/(f(j) indegree(j))
+  double edge_rate_vm(
+           typename graph_traits<network_t>::edge_descriptor e,
+           const network_t &n, set<vertex_t> &s)
+  { double fj = node_fitness(target(e,n),s);
+    return 1.0 / (fj * in_degree(target(e,n),n));
   }
 };
 

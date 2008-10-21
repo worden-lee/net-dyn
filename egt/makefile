@@ -26,13 +26,13 @@ $(NETDYNLIB) :
 	(cd $(NETDYNDIR) && $(MAKE))
 
 sensitivity : sensitivity.o
-	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
+	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
 
 network-sample : network-sample.o
-	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
+	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
 
 analyse-net : analyse-net.c
-	$(CC) $(CFLAGS) -ligraph $< -o $@ 
+	$(CXX) $(CFLAGS) $< -ligraph -o $@
 
 %/betweenness.csv : %/dot/1.edgelist ./analyse-net
 	./analyse-net $< $@
@@ -56,10 +56,10 @@ DEPS = $(OBJS:.o=.P)
 -include $(DEPS)
 
 network-optimize : $(NOOBJ) $(NETDYNLIB)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $(NOOBJ) $(LDFLAGS)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(NOOBJ) $(LDFLAGS) -o $@
 
 swarming : $(SWOBJ) $(NETDYNLIB)
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -o $@ $(SWOBJ) $(LDFLAGS)
+	$(CXX) $(CFLAGS) $(CXXFLAGS) $(SWOBJ) $(LDFLAGS) -o $@
 
 clean:
 	$(RM) *.o *.P *~ *#

@@ -2,12 +2,20 @@
 
 # what directory to look in?
 
-load.batch.results <- function(path="batch-data")
+load.batch.results <- function(path="batch-data",target="network.csv")
 { # list the relevant files under that directory
-  files <- dir(path,pattern="network.csv",recursive=TRUE, full.names=TRUE);
+  files <- dir(path,pattern=target,recursive=TRUE, full.names=TRUE);
   all.rows <- NULL;
   for (f in files)
   { fd <- read.csv(f,header=TRUE);
+    rep <- sub("^.*out.([^/]*)/.*$","\\1",f);
+    fd <- cbind(data.frame(rep=rep),fd);
+    if (target == "nodes.csv")  # hell of inefficient
+    { netf <- sub("nodes.csv","network.csv",f);
+      net <- read.csv(netf,header=TRUE);
+      net <- cbind(data.frame(rep=rep),net);
+      fd <- merge(net,fd,by=c("rep"),suffixes=c(".net",".node"));
+    }
     if (is.null(all.rows))
       all.rows <- fd
     else

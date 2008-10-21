@@ -106,12 +106,15 @@ main(int argc, char **argv)
     opt_animation.update(0,n);
   }
 #endif
+  // now evaluate the simulation
   double fixp = sind(n);
-  network_selection_indicator<network_t,rng_t,ParamsClass>::fixation_stats
-    &cache = sind.provide_stats(n);
+
+  // now get the simulation results, in detail
+  network_selection_indicator<network_t,rng_t,ParamsClass>::fixation_stats_t
+    &stats = sind.provide_stats(n);
   if (parameters.print_stuff())
   { cout << "fixation probability: " << fixp << '\n';
-    cout << "n of trials: " << cache.n_trials << '\n';
+    cout << "n of trials: " << stats.n_trials << '\n';
     if (fixp > 0)
     {
       cout << "mean fixation time: "   << ft_ind(n) << '\n';
@@ -119,7 +122,7 @@ main(int argc, char **argv)
       cout << "mean absorption time: " << at_ind(n) << '\n';
       cout << "mean peak before extinction: " << mp_ind(n) << '\n';
       cout << "biggest peak before extinction: "
-           << cache.max_peakbeforeextinction << '\n';
+           << stats.max_peakbeforeextinction << '\n';
     }
   }
 
@@ -129,14 +132,35 @@ main(int argc, char **argv)
     // record other measures like mu_{-1} ?
     network_csv << "nv" << "in_exp" << "out_exp" << "density" << "mutuality"
                 << "p" << "accuracy" << "moran_probability";
+    for (int i = -2; i <= 2; ++i)
+      for (int j = -2; j <= 2; ++j)
+        if (i != 0 || j != 0)
+          network_csv << stringf("mu.%d.%d",i,j);
     network_csv.newRow();
     network_csv << parameters.n_vertices() << parameters.pl_in_exp()
                 << parameters.pl_out_exp() << density(n) << mutuality_ind(n)
-                << fixp << cache.fixation_accuracy()
+                << fixp << stats.fixation_accuracy()
                 << moran_probability(parameters.mutantFitness()
                                      /parameters.residentFitness(),
                                      parameters.n_vertices());
+    for (int i = -2; i <= 2; ++i)
+      for (int j = -2; j <= 2; ++j)
+        if (i != 0 || j != 0)
+          network_csv << degree_moment(n,i,j);
     network_csv.newRow();
+
+    CSVDisplay nodes_csv(parameters.outputDirectory()+"/nodes.csv");
+    nodes_csv << "vertex" << "p" << "in degree" << "out degree";
+    nodes_csv.newRow();
+    graph_traits<network_t>::vertex_iterator it,iend;
+    for (tie(it,iend) = vertices(n); it != iend; ++it)
+    { fixation_record &vstats = stats.fixations_by_vertex[*it];
+      nodes_csv << *it
+                << (double(vstats.n_fixations)/
+                    (vstats.n_fixations+vstats.n_extinctions))
+                << in_degree(*it,n) << out_degree(*it,n);
+      nodes_csv.newRow();
+    }
   }
 
   return 0;

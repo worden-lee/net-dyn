@@ -25,7 +25,8 @@ merge_and_clone_mutation_probability 0
 # split_edge_mutation_probability is the remainder
 
 #  --- for the fixation process
-choose_parent_first true #false
+#choose_parent_first true #false
+update_rule EGT
 residentFitness 1
 mutantFitness 1.2 #1.1
 # mutantFitness 0.9 # less than resident to select for drift

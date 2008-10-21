@@ -105,22 +105,29 @@ public:
 
 // this one has to go in the class declaration,
 // once for each enum type
-// #define ENUM_DECLARATIONS(en_t) \
-//   map<string,en_t> s_##en_t##_map; \
-//   map<en_t,string> en_t##_s_map; \
-//   inline en_t string_to_##en_t(const string &x) \
-//   { return s_##en_t##_map[x]; } \
-//   inline string en_t##_to_string(en_t x) \
-//   { return en_t##_s_map[x]; }
+// notice at() in place of operator[]: necessary because of
+// const, but have to be confident it won't raise a 'not found'
+// exception.
+#define ENUM_DECLARATIONS(en_t) \
+  map<string,en_t> s_##en_t##_map; \
+  map<en_t,string> en_t##_s_map; \
+  inline en_t string_to_##en_t(const string &x) const \
+  { return s_##en_t##_map.at(x); }                    \
+  inline string en_t##_to_string(en_t x) const \
+  { return en_t##_s_map.at(x); }
 
-// and this one has to go in the LParameters constructor,
+// and this one has to go in the Parameters class's constructor,
 // once for each possible value of each enum type.
-// #define DECLARE_ENUM_VALUE(en_t,val) \
-//   s_##en_t##_map[#val] = val; \
-//   en_t##_s_map[val] = #val;
+#define DECLARE_ENUM_VALUE(en_t,val) \
+  s_##en_t##_map[#val] = val; \
+  en_t##_s_map[val] = #val;
 
 public:
-  Parameters() : inheritFrom(0) {}
+  Parameters() : inheritFrom(0)
+  { DECLARE_ENUM_VALUE(update_rule_t,EGT);
+    DECLARE_ENUM_VALUE(update_rule_t,VM);
+    DECLARE_ENUM_VALUE(update_rule_t,SKYE);
+  }
 
   //  --- global stuff
 
@@ -228,7 +235,10 @@ public:
   //   choose a parent among the child's in-neighbors, weighted by
   //     fitness and edge weight
   // (though so far, edge weights are assumed to be 1)
-  DECLARE_PARAM(bool, choose_parent_first)
+  //DECLARE_PARAM(bool, choose_parent_first)
+  typedef enum { EGT, VM, SKYE } update_rule_t;
+  ENUM_DECLARATIONS(update_rule_t)
+  DECLARE_PARAM(update_rule_t, update_rule)
 
   // fitness at the 'normal' vertices
   DECLARE_PARAM(double, residentFitness)

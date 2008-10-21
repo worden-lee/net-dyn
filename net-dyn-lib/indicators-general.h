@@ -401,50 +401,57 @@ public:
     : result(_r), time(_t), peak(_p) {}
 };
 
+// superclass for fixation_stats
+class fixation_record
+{ public:
+  fixation_record() : n_fixations(0), n_extinctions(0), n_trials(0) {}
+  unsigned n_fixations;
+  unsigned n_extinctions;
+  unsigned n_trials;
+};
+
+// in selection_indicator, below, an object of this type is stored for
+// each argument.  if the same argument is received again, this object
+// will be updated to reflect all results seen so far for that
+// argument.  in this way, estimates improve until the desired
+// accuracy is reached.
+class fixation_stats : public fixation_record
+{ public:
+  double sum_fixationtime;
+  double sum_extinctiontime;
+  unsigned sum_peakbeforeextinction;
+  unsigned max_peakbeforeextinction;
+  // for figuring prob. of fixation given population of x
+  // record how many times x is hit by all trajectories leading to
+  // fixation and to extinction.
+  //     vector<int> histogram_success;
+  //     vector<int> histogram_failure;
+  fixation_stats() : sum_fixationtime(0), sum_extinctiontime(0),
+                     sum_peakbeforeextinction(0),
+                     max_peakbeforeextinction(0)
+  {}
+  unsigned fixation_N()
+  { return n_fixations + n_extinctions; }
+  double fixation_probability()
+  { return double(n_fixations)/fixation_N(); }
+  double fixation_accuracy()
+  { return Bernoulli_accuracy(fixation_probability(), fixation_N());
+  }
+};
+
 // given an argument type that is capable of 'fixation' this
 // class samples the probability of fixation, and caches its
 // results so that multiple calls improve the estimate.
 //
 // for a specific scenario, construct a subclass that provides
 //   try_fixation() and optionally test_fixation_candidate().
-template<typename argument_t, typename RNG_t, typename params_t>
+template<typename argument_t, typename RNG_t, typename params_t,
+         typename fixation_stats_t=fixation_stats>
 class selection_indicator : public ObjectWithParameters<params_t>
 {
   using ObjectWithParameters<params_t>::params;
-public:
-  // an object of this type is stored for each argument.  if the same
-  // argument is received again, this object will be updated to
-  // reflect all results seen so far for that argument.  in this way,
-  // estimates improve until the desired accuracy is reached.
-  class fixation_stats 
-  { public:
-    unsigned n_fixations;
-    unsigned n_extinctions;
-    unsigned n_trials;
-    double sum_fixationtime;
-    double sum_extinctiontime;
-    unsigned sum_peakbeforeextinction;
-    unsigned max_peakbeforeextinction;
-    // for figuring prob. of fixation given population of x
-    // record how many times x is hit by all trajectories leading to
-    // fixation and to extinction.
-//     vector<int> histogram_success;
-//     vector<int> histogram_failure;
-    fixation_stats() : n_fixations(0), n_extinctions(0), n_trials(0),
-                       sum_fixationtime(0), sum_extinctiontime(0),
-                       sum_peakbeforeextinction(0),
-                       max_peakbeforeextinction(0)
-    {}
-    unsigned fixation_N()
-    { return n_fixations + n_extinctions; }
-    double fixation_probability()
-    { return double(n_fixations)/fixation_N(); }
-    double fixation_accuracy()
-    { return Bernoulli_accuracy(fixation_probability(), fixation_N());
-    }
-  };
 protected:
-  typedef map< string, fixation_stats > cache_t;
+  typedef map< string, fixation_stats_t > cache_t;
   cache_t cache;
 
 public:
@@ -452,7 +459,7 @@ public:
 
   // this is sometimes useful, points to the cache for the last thing
   // passed in for evaluation
-  fixation_stats *currently_processing;
+  fixation_stats_t *currently_processing;
 
   selection_indicator(RNG_t _rng, params_t*_p=0)
     : rng(_rng), currently_processing(0)
@@ -551,7 +558,7 @@ public:
     return indicator_value(p,accuracy);
   }
 
-  fixation_stats&provide_stats(const argument_t&a)
+  fixation_stats_t&provide_stats(const argument_t&a)
   { return cache[cache_key(a)]; }
 };
 
@@ -575,7 +582,7 @@ public:
   mean_fixation_time_indicator(sel_ind_class&_si) : sel_ind(_si) {}
   template<typename arg_t>
   double operator()(const arg_t&a)
-  { typename sel_ind_class::fixation_stats&ncache = sel_ind.provide_stats(a);
+  { typename sel_ind_class::fixation_stats_t&ncache = sel_ind.provide_stats(a);
     return ncache.sum_fixationtime/ncache.n_fixations;
   }
 };
@@ -589,7 +596,7 @@ public:
   mean_extinction_time_indicator(sel_ind_class&_si) : sel_ind(_si) {}
   template<typename arg_t>
   double operator()(const arg_t&a)
-  { typename sel_ind_class::fixation_stats&ncache = sel_ind.provide_stats(a);
+  { typename sel_ind_class::fixation_stats_t&ncache = sel_ind.provide_stats(a);
     return ncache.sum_extinctiontime/ncache.n_extinctions;
   }
 };
@@ -603,7 +610,7 @@ public:
   mean_absorption_time_indicator(sel_ind_class&_si) : sel_ind(_si) {}
   template<typename arg_t>
   double operator()(const arg_t&a)
-  { typename sel_ind_class::fixation_stats&ncache = sel_ind.provide_stats(a);
+  { typename sel_ind_class::fixation_stats_t&ncache = sel_ind.provide_stats(a);
     return (ncache.sum_extinctiontime + ncache.sum_fixationtime)
       /(ncache.n_extinctions + ncache.n_fixations);
   }
@@ -618,7 +625,7 @@ public:
   mean_peak_before_extinction_indicator(sel_ind_class&_si) : sel_ind(_si) {}
   template<typename arg_t>
   double operator()(const arg_t&a)
-  { typename sel_ind_class::fixation_stats&ncache = sel_ind.provide_stats(a);
+  { typename sel_ind_class::fixation_stats_t&ncache = sel_ind.provide_stats(a);
     return ncache.sum_peakbeforeextinction
       / double(ncache.n_extinctions);
   }

@@ -1,7 +1,8 @@
 experiment OPTIMIZE
 initial_graph_type STAR
 n_vertices 8
-choose_parent_first false
+#choose_parent_first false
+update_rule SKYE
 
 # custom mutations -- preserve size of graph
 
