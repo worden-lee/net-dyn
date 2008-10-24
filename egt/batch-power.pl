@@ -25,7 +25,8 @@ print "@explist\n";
 for my $i (1 .. $reps)
 { for my $inexp (@explist)
   { for my $outexp (@explist)
-    { my @extra_args = ("pl_in_exp=$inexp","pl_out_exp=$outexp");
+    { my @extra_args = ("pl_in_exp=$inexp","pl_out_exp=$outexp",
+                        "mutantFitness=1.05");
       my($catdir) = "$outdir/".join(".",@extra_args);
       my($dest) = "$catdir/out.$i";
       next if (-e $dest);
