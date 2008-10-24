@@ -322,7 +322,7 @@ public:
   { parseSettingsFile(file);
     // if not set explicitly, rand seed is time
     if (!get("randSeed"))
-      setrandSeed(time(0));
+      setrandSeed(time(0)*getpid());
   }
   void parseSettingsFile(string filename);
   void parseSettings(istream &);
