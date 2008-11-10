@@ -4,10 +4,15 @@
 
 load.batch.results <- function(path="batch-data",target="network.csv")
 { # list the relevant files under that directory
+  cat("expanding list of files in (",path,")\n");
   files <- dir(path,pattern=target,recursive=TRUE, full.names=TRUE);
+  cat("found ",length(files)," files\n");
+  #if (length(files) > 1000)
+  #{ files <- files[1:1000]; }
   all.rows <- NULL;
   for (f in files)
-  { fd <- read.csv(f,header=TRUE);
+  { cat(f,"\n");
+    fd <- read.csv(f,header=TRUE);
     rep <- sub("^.*out.([^/]*)/.*$","\\1",f);
     fd <- cbind(data.frame(rep=rep),fd);
     if (target == "nodes.csv")  # hell of inefficient
