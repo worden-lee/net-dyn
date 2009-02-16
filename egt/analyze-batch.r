@@ -47,10 +47,11 @@ stars <- function(p)
 }
 
 doplot <- function(xv, yv, xlab, ylab="influence",
-                   xlabelpos=0, ylabelpos=0, filename=NULL)
+                   xlabelpos=0, ylabelpos=0, lm=NULL, filename=NULL)
 {
   plot(xv,yv,xlab=xlab,ylab=ylab)
-  lm <- lm(yv ~ xv)
+  if (is.null(lm))
+  { lm <- lm(yv ~ xv) }
   lms <- summary(lm)
   abline(lm,col="red")
 #  lines=sprintf("r-squared=%g\nslope=%g\nstd.err(slope)=%g\np=%g %s",
