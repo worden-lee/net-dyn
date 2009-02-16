@@ -28,11 +28,11 @@ $(NETDYNLIB) :
 network-optimize : network-optimize.o
 	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
 
-sensitivity : sensitivity.o
+sensitivity : sensitivity.o $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
 
-network-sample : network-sample.o
-	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
+network-sample : network-sample.o $(NETDYNLIB)
+	$(CXX) $< -o $@ $(CFLAGS) $(LDFLAGS)
 
 analyse-net : analyse-net.c
 	$(CXX) $(CFLAGS) $< -ligraph -o $@
@@ -48,7 +48,7 @@ analyse-net : analyse-net.c
 
 # fancy GNU-style line for tracking header dependencies in .P files
 %.o : %.cpp
-	$(CXX) $(CFLAGS) $(CXXFLAGS) -MD -c $< -o $@
+	$(CXX) $(CFLAGS) $(CXXFLAGS) -save-temps -MD -c $< -o $@
 	@cp $*.d $*.P; \
 	    sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	        -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
