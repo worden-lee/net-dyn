@@ -11,7 +11,7 @@ my @explist =
 my $pwd = `pwd`;
 chomp($pwd);
 
-my $experiment = "network-power-sample-vm";
+my $experiment = "network-power-sample";
 my $outdir = "$pwd/batch-data/$experiment";
 
 if (!-e $outdir)

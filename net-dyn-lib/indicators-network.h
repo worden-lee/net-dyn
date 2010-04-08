@@ -951,7 +951,7 @@ public:
       // now choose a parent vertex, with prob. proportional to edge weight
       //  which are all assumed to be 1
       typename network_t::degree_size_type n_parents
-	= in_degree(parent,n);
+	= in_degree(child,n);
       typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
       if (n_parents <= 0)
 	continue; // no out edges, start over

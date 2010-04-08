@@ -1,4 +1,4 @@
-/* -*- C++ -*- */
+/*t -*- C++ -*- */
 #ifndef DOTDISPLAY_H
 #define DOTDISPLAY_H
 
@@ -161,7 +161,9 @@ public:
     {
       string dotcomm =
 	//string("/usr/bin/dot -Tps -o")
-	string("/usr/bin/neato ") + (xs->writes_positions()? "-n1 ":"")
+	//string("/usr/bin/neato ")
+	string("neato ")
+        + (xs->writes_positions()? "-n1 ":"")
         + "-Goverlap=scale -Gsplines=true -Tps -o"
 	+ xs->epsfile() + " " + graphfile;
       

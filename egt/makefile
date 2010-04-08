@@ -25,9 +25,6 @@ NETDYNLIB = $(NETDYNDIR)/libnet-dyn.a
 $(NETDYNLIB) :
 	(cd $(NETDYNDIR) && $(MAKE))
 
-network-optimize : network-optimize.o
-	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
-
 sensitivity : sensitivity.o $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@
 

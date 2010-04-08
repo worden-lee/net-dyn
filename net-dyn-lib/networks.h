@@ -227,10 +227,11 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
   else if (igt == "POWER")
   { // scale-free random graph with specified exponents for
     // in and out degree distributions
-    typedef powerlaw_iterator<rng_t,network_t> PLGen;
-    copy(PLGen(rng, num_vertices(n), parameters.graph_density(),
-               parameters.pl_in_exp(), parameters.pl_out_exp()),
-         PLGen(), edge_inserter(n));
+    typedef powerlaw_iterator_fixed_density<rng_t,network_t> PLGen;
+    copy(PLGen(n, rng, num_vertices(n),
+               parameters.graph_density(), parameters.pl_in_exp(),
+	       parameters.pl_out_exp()),
+         PLGen::end(), edge_inserter(n));
   }
   else if (igt == "PLOD")
   { // power law out-degree random graph with given size and density

@@ -88,7 +88,7 @@ public:
     return *this;
   }
 
-  bool operator==(const powerlaw_iterator& other) const
+  virtual bool operator==(const powerlaw_iterator& other) const
   { 
     return degrees_left == other.degrees_left; 
   }
@@ -126,6 +126,55 @@ private:
   std::size_t degrees_left;
   bool allow_self_loops;
   value_type current;
+};
+
+// This is like the above iterator class, but it knows how to stop
+// when it's generated the right number of edges.
+template<typename RandomGenerator, typename Graph>
+class powerlaw_iterator_fixed_density :
+  public powerlaw_iterator<RandomGenerator,Graph>
+{
+  const Graph &graph;
+  double density;
+  bool done;
+public:
+  powerlaw_iterator_fixed_density(const Graph &g,
+  		RandomGenerator& gen, std::size_t n,  
+		double dens, double in_exp, double out_exp,
+		bool allow_self_loops = false) :
+    graph(g), density(dens), done(false),
+    powerlaw_iterator<RandomGenerator,Graph>(gen, n, 1000, in_exp, out_exp,
+					     allow_self_loops)
+  {}
+
+  // default constructor makes the 'end' iterator
+  powerlaw_iterator_fixed_density() 
+    : graph(0), density(0), done(true), powerlaw_iterator<RandomGenerator,Graph>()
+  {}
+
+  static powerlaw_iterator_fixed_density &end(void)
+  { static powerlaw_iterator_fixed_density end_iterator;
+    return end_iterator;
+  }
+
+  powerlaw_iterator_fixed_density& operator++()
+  { size_t n = num_vertices(graph);
+    double cur_dens = (num_edges(graph)) / double(n*(n-1));
+    if (cur_dens >= density)
+    { done = true;
+      return end();
+    }
+    powerlaw_iterator<RandomGenerator,Graph>::operator++();
+    return *this;
+  }
+
+  bool operator==(const powerlaw_iterator_fixed_density& other) const
+  { if (done && other.done)
+      return true;
+    return powerlaw_iterator<RandomGenerator,Graph>::operator==(other);
+  }
+  bool operator!=(const powerlaw_iterator_fixed_density& other) const
+  { return !(*this == other); }
 };
 
 /*
