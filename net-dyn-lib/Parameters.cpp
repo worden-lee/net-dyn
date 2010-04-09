@@ -1,6 +1,7 @@
 #include "Parameters.h"
 #include <fstream>
 #include <list>
+#include <algorithm>
 #include <functional>
 
 void Parameters::handleArgs(int argc, char **argv)

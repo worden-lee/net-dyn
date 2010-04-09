@@ -9,8 +9,10 @@
 #include <iostream>
 #include <errno.h>
 #include <stdlib.h>
+#include <limits>
 //typedef _G_va_list va_list;
 #include <stdarg.h>
+#include <string.h>
 #include <string>
 using namespace std;
 

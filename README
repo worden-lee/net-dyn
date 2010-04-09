@@ -1,6 +1,4 @@
 Migrating from cvs to git.  CVS working directory for simulation/netwerk
-should be abandoned, /home/wonder/work/simulation/netwerk-git should be
-used for working, /home/wonder/work/simulation/netwerk-git-repo should
-be used as repository and DO NOT make any local changes in there.
-
-See http://issaris.blogspot.com/2005/11/cvs-to-git-and-back.html.
+should be abandoned, git repo at $sw:working/simulation/netwerk-git is the
+stable repository, and there's a clone of it on my laptop for active
+development.

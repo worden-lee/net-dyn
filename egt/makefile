@@ -49,11 +49,13 @@ analyse-net : analyse-net.c
 	@cp $*.d $*.P; \
 	    sed -e 's/#.*//' -e 's/^[^:]*: *//' -e 's/ *\\$$//' \
 	        -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
-	    rm -f $*.d
+	    rm -f $*.d $*.s $*.ii
 
 DEPS = $(OBJS:.o=.P)
 
 -include $(DEPS)
+
+NOOBJ = network-optimize.o
 
 network-optimize : $(NOOBJ) $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $(CXXFLAGS) $(NOOBJ) $(LDFLAGS) -o $@
