@@ -879,8 +879,7 @@ public:
       parent = choose_weighted(vi,vend,state,this->rng,total_fitness);
       // now choose a child vertex, with prob. proportional to edge weight
       //  which are all assumed to be 1
-      typename network_t::degree_size_type n_children
-	= out_degree(parent,n);
+      typename network_t::degree_size_type n_children = out_degree(parent,n);
       typename graph_traits<network_t>::adjacency_iterator ci,cend;
       if (n_children <= 0)
 	continue; // no out edges, start over
@@ -921,7 +920,7 @@ public:
       typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
       tie(pi,pend) = inv_adjacent_vertices(child,n);
       if (pi == pend) // if child has no in edges, try again
-	continue;
+        continue;
       // weighted by fitness
       parent = choose_weighted(pi,pend,state,this->rng);
       // sanity check
@@ -951,11 +950,10 @@ public:
       child = choose_weighted(vi,vend,rate,this->rng,total_rate);
       // now choose a parent vertex, with prob. proportional to edge weight
       //  which are all assumed to be 1
-      typename network_t::degree_size_type n_parents
-	= in_degree(child,n);
+      typename network_t::degree_size_type n_parents = in_degree(child,n);
       typename inv_adjacency_iterator_generator<network_t>::type pi, pend;
       if (n_parents <= 0)
-	continue; // no out edges, start over
+        continue; // no out edges, start over
       else if (n_parents == 1)
       { tie(pi,pend) = inv_adjacent_vertices(child,n);
         parent = *pi;
@@ -1059,7 +1057,7 @@ public:
     // devices for animating the fixation process
     bool animate = params.animate_fixation();
     // running count of infected vertices
-    IndicatorsDisplayController<network_t,ParamsClass> fixationDisplay;
+    IndicatorsDisplayController<network_t,params_t> fixationDisplay;
     fixationDisplay.inheritParametersFrom(params);
     fixationDisplay.setoutfilenamebase("fixation");
     fixationDisplay.params.setdisplayToScreen(animate);

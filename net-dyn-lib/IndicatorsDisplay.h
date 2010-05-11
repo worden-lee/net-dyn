@@ -36,11 +36,11 @@ class IndicatorsDisplayController :
   vector<string> names;
   CSVDisplay *csvdisplay;
   unsigned serial;
-  using ObjectWithParameters<ParamsClass>::params;
   using TimeSeriesController<int,ParamsClass>::display;
   using DisplayController< TimeSeriesDisplay<int,ParamsClass>,
                            ParamsClass >::recordCounter;
 public:
+  using ObjectWithParameters<ParamsClass>::params;
   IndicatorsDisplayController()
     : csvdisplay(0), serial(idc_serial_counter++)
   {}

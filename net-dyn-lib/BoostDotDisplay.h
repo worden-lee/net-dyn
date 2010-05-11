@@ -386,8 +386,9 @@ make_vertex_id(const boost::adjacency_list<A,boost::setS,C,D,E,F,G>&n)
 template<typename network_t, typename PC, bool Lattice_p=false>
 class BoostDotGraphController : public DotGraphController<PC>
 {
-  using ObjectWithParameters<PC>::params;
 public:
+  using ObjectWithParameters<PC>::params;
+
   BoostDotGraphController() : n(0) {}
 
   // this may be a departure from the boost idiom, but here it is:

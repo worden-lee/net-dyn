@@ -103,10 +103,10 @@ class HistogramDisplayController :
 public:
   typedef DisplayController< HistogramDisplay<key_t,params_t>, params_t >
     superclass;
-protected:
   // newer g++'s are very picky about these things
-  using superclass::display;
   using ObjectWithParameters<params_t>::params;
+protected:
+  using superclass::display;
 
 public:
 
