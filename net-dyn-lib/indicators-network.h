@@ -22,7 +22,7 @@
 #include <boost/graph/random.hpp>
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <numeric>
 #include <sstream>
@@ -785,6 +785,7 @@ class network_selection_indicator
                                net_fixation_stats<network_t> >
 { typedef selection_indicator< network_t,RNG_t,params_t,
                                net_fixation_stats<network_t> > selind;
+public:
   using ObjectWithParameters<params_t>::params;
   using selind::currently_processing;
 

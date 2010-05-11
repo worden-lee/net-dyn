@@ -20,8 +20,8 @@
 #include "HistogramDisplay.h"
 //#include "network-optimize.h"
 using namespace std;
-using namespace boost;
 #include <boost/lambda/lambda.hpp>
+using namespace boost;
 using namespace boost::lambda;
 #include <iostream>
 #include <limits>
@@ -368,13 +368,15 @@ double moran_probability(double r, double n)
 { return (1 - 1/r) / (1 - pow(r,-n));
 }
 
-#include "boost/property_map.hpp"
+#include "boost/graph/property_maps/constant_property_map.hpp"
+#if 0  // now defined by boost library
 //this is modeled after boost's identity_property_map
 // it can, for instance, assign weight 1 to all edges,
 // which is necessary in finding shortest paths
-template<typename _key_t, typename _value_t>
+template<class _key_t, class _value_t>
 struct constant_property_map
-  : public put_get_helper<_value_t, constant_property_map<_key_t,_value_t> >
+  : public boost::put_get_helper<_value_t, 
+      constant_property_map<_key_t,_value_t> >
 { typedef _key_t key_type;
   typedef _value_t value_type;
   typedef _key_t reference;
@@ -384,6 +386,7 @@ struct constant_property_map
   inline value_type operator[](const key_type& _t) const
   { return value; }
 };
+#endif
 
 // for monte carlo fixation probability simulations.  try a single
 // sample, see if it goes to fixation or extinction, or some other
@@ -449,6 +452,7 @@ template<typename argument_t, typename RNG_t, typename params_t,
          typename fixation_stats_t=fixation_stats>
 class selection_indicator : public ObjectWithParameters<params_t>
 {
+public:
   using ObjectWithParameters<params_t>::params;
 protected:
   typedef map< string, fixation_stats_t > cache_t;
@@ -495,7 +499,7 @@ public:
 
     currently_processing = &cache[cache_key(a)];
 #ifdef DISPLAY
-    IndicatorsDisplayController<argument_t,ParamsClass> trialsDisplay;
+    IndicatorsDisplayController<argument_t,params_t> trialsDisplay;
     if (params.animate_estimates())
     { trialsDisplay.inheritParametersFrom(this->params);
       trialsDisplay.params.setdisplayEvery(params.timesToTestFixation()/20);

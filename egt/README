@@ -1,0 +1,8 @@
+Some notes:
+
+analyze-batch.r seems to be newer than load-nodes.r and replace it.
+
+to plot the degree distribution of a given network:
+$ R
+> n <- read.csv("out/nodes.csv")
+> hist(n$in.degree,1:20)
