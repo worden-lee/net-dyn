@@ -3,7 +3,7 @@ initial_graph_type POWER
 
 n_vertices 40 # 8 # 400 # 150
 
-graph_density 0.25
+graph_density 0.10 # 0.25
 #pl_in_exp 1.5
 #pl_out_exp 2
 

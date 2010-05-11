@@ -33,10 +33,10 @@ class sensitivity_simulation
   : public selection_indicator<network_t,RNG_t,params_t>
 {
   typedef selection_indicator<network_t, RNG_t, params_t> selind_t;
-  using selind_t::params;
-
   typedef typename graph_traits<network_t>::vertex_descriptor
     vertex_descriptor;
+
+  using selind_t::params;
 
   // these represent the "logical clauses" discussed in the wiki.
   // store one of these per node, instead of just a boolean for
@@ -145,10 +145,10 @@ class sensitivity_simulation
   };
 
 public:
-  //using selind_t::fixation_stats;
+  typedef typename selind_t::fixation_stats_t fixation_stats_t;
 
   // make one of these for each case (baseline, some node perturbed)
-  class track_case_t : public selind_t::fixation_stats
+  class track_case_t : public fixation_stats_t
   { // use the superclass to keep overall track of how many fixated/extinct 
   public:
     bool finished; // short-term: has this case come to fix/ext this
@@ -358,7 +358,7 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
     }
     cout << track_baseline.n_trials << ' '
          << track_baseline.fixation_probability()
-         << "Â±" << track_baseline.fixation_accuracy() << endl;
+         << "±" << track_baseline.fixation_accuracy() << endl;
 #if DISPLAY
     if (track_baseline.n_trials % 1000 == 0 ||
         track_baseline.n_trials >= max_trials)

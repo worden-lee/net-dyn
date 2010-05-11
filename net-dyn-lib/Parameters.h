@@ -48,15 +48,15 @@ public:
 // the rest of the program to use.
 // So for instance,
 // 
-// DECLARE_PARAM(double,abortOnFullMoon)
+// DECLARE_PARAM(bool,abortOnFullMoon)
 // 
 // would expand to
 // 
-// inline void setabortOnFullMoon(double val)
-// { set("abortOnFullMoon",double_to_string(val)); }
-// inline double abortOnFullMoon()
+// inline void setabortOnFullMoon(bool val)
+// { set("abortOnFullMoon",bool_to_string(val)); }
+// inline bool abortOnFullMoon()
 // { const string *str = get("abortOnFullMoon");
-//   return str? string_to_double(*str) : double();
+//   return str? string_to_bool(*str) : bool();
 // }
 //
 // the various string_to_* and *_to_string functions are

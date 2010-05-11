@@ -449,10 +449,11 @@ class fixation_stats : public fixation_record
 // for a specific scenario, construct a subclass that provides
 //   try_fixation() and optionally test_fixation_candidate().
 template<typename argument_t, typename RNG_t, typename params_t,
-         typename fixation_stats_t=fixation_stats>
+         typename fst=fixation_stats>
 class selection_indicator : public ObjectWithParameters<params_t>
 {
 public:
+  typedef fst fixation_stats_t;
   using ObjectWithParameters<params_t>::params;
 protected:
   typedef map< string, fixation_stats_t > cache_t;
