@@ -10,7 +10,7 @@ graph_density 0.10 # 0.25
 animate_estimates false # true
 
 timesToTestFixation 40000
-#monte_carlo_selection_accuracy 0.004
+#monte_carlo_selection_accuracy 0.02 # 0.004
 require_strongly_connected true
 
 # to disable ghostview popcorn

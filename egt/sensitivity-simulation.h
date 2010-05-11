@@ -214,7 +214,12 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
   double u = params.residentFitness();
   double r = params.mutantFitness();
   double rp = params.perturbed_mutant_fitness();
-  double desired_accuracy = params.monte_carlo_selection_accuracy();
+  unsigned max_trials = params.timesToTestFixation();
+  if (max_trials == 0)
+  { double desired_accuracy = params.monte_carlo_selection_accuracy();
+    // do runs until accuracy is guaranteed small enough.
+    max_trials = Bernoulli_estimate_n(desired_accuracy);
+  }
 
 #if DISPLAY
   BoostDotGraphController<network_t,params_t> influence_display;
@@ -230,8 +235,6 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
   // random variable "xi" for reuse
   ur_t choose_xi(rng,uniform_real<>(0,rp));
 
-  // do runs until accuracy is guaranteed small enough.
-  unsigned max_trials = Bernoulli_estimate_n(desired_accuracy);
   cout << max_trials << " trials\n";
 
   while (track_baseline.n_trials < max_trials)
@@ -370,10 +373,10 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
   //accuracy achieved.
   cout << "\ndone. fixation probabilities:\nbaseline: "
        << track_baseline.fixation_probability()
-       << "Â±" << track_baseline.fixation_accuracy() << '\n';
+       << "±" << track_baseline.fixation_accuracy() << '\n';
   for(int i = 0; i < track_perturbations.size(); ++i)
     cout << track_perturbations[i].fixation_probability()
-         << "Â±" << track_perturbations[i].fixation_accuracy() << ' ';
+         << "±" << track_perturbations[i].fixation_accuracy() << ' ';
   cout << "\n\nchanged outcomes:\n";
   for(int i = 0; i < track_perturbations.size(); ++i)
     cout << track_perturbations[i].n_fixations - track_baseline.n_fixations
@@ -383,7 +386,7 @@ void sensitivity_simulation<network_t, RNG_t, params_t>
   for(int i = 0; i < track_perturbations.size(); ++i)
   { dpdri[i] = (track_perturbations[i].fixation_probability()
                 - track_baseline.fixation_probability()) / (rp - r);
-    if (abs(dpdri[i]) < desired_accuracy/1000)
+    if (abs(dpdri[i]) < 1e-5) //desired_accuracy/1000)
       dpdri[i] = 0;
     cout << dpdri[i] << ' ';
   }
