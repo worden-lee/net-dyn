@@ -1,12 +1,12 @@
-NETDYNDIR = ../net-dyn-lib
-VXLDIR = ../vxl
-ESTRDIR = ../libexecstream
+NETDYNDIR ?= ../net-dyn-lib
+VXLDIR ?= ../vxl
+ESTRDIR ?= ../libexecstream
 # add -pg for profiling
 CFLAGS=-g -I$(NETDYNDIR) -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(VXLDIR)/v4p/netlib -I$(ESTRDIR)
 LDFLAGS=-L$(NETDYNDIR) -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -L$(VXLDIR)/lib $(ESTRDIR)/exec-stream.o -lnet-dyn -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
 
 # enable to use compiler optimization
-OPTIMIZE=yes
+OPTIMIZE?=yes
 ifeq ($(OPTIMIZE),yes)
 CFLAGS+=-O3
 endif
