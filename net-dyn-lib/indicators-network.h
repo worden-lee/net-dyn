@@ -22,7 +22,7 @@
 #include <boost/graph/random.hpp>
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
-#include <boost/property_map/vector_property_map.hpp>
+#include <boost/vector_property_map.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <numeric>
 #include <sstream>
