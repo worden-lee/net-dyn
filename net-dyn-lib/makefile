@@ -7,8 +7,11 @@ default: $(NETDYNLIB)
 $(NETDYNLIB) : $(NETDYNOBJ)
 	$(AR) rs $(NETDYNLIB) $(NETDYNOBJ)
 
-CFLAGS=-g -I../libexecstream -I../vxl/core -I../vxl/vcl -I../vxl/core/vnl -I../vxl/v3p/netlib -I../vxl/v4p/netlib
-LDFLAGS=../libexecstream/exec-stream.o -L../vxl/core/vnl/algo -L../vxl/core/vnl -L../vxl/vcl -L../vxl/v3p/netlib -L../vxl/lib -lnet-dyn -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
+VXLDIR ?= ../vxl
+ESTRDIR ?= ../libexecstream
+# add -pg for profiling
+CFLAGS=-g -I$(NETDYNDIR) -I$(VXLDIR)/core -I$(VXLDIR)/vcl -I$(VXLDIR)/core/vnl -I$(VXLDIR)/v3p/netlib -I$(VXLDIR)/v4p/netlib -I$(ESTRDIR)
+LDFLAGS=-L$(NETDYNDIR) -L$(VXLDIR)/core/vnl/algo -L$(VXLDIR)/core/vnl/ -L$(VXLDIR)/vcl -L$(VXLDIR)/v3p/netlib -L$(VXLDIR)/lib $(ESTRDIR)/exec-stream.o -lnet-dyn -lvnl_algo -lvnl -lvcl -lnetlib -lv3p_netlib -lpthread
 
 # stuff for automatic header file dependencies
 %.o : %.cpp
