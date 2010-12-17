@@ -63,7 +63,7 @@ main(int argc, char **argv)
   construct_network(n,parameters,rng);
 
   if (parameters.print_stuff())
-  { if (parameters.print_adjency_matrix())
+  { if (parameters.print_adjacency_matrix())
     { cout << "network:\n";
       print_object(n,cout);
     }
