@@ -63,8 +63,10 @@ main(int argc, char **argv)
   construct_network(n,parameters,rng);
 
   if (parameters.print_stuff())
-  { cout << "network:\n";
-    print_object(n,cout);
+  { if (parameters.print_adjency_matrix())
+    { cout << "network:\n";
+      print_object(n,cout);
+    }
     cout << "density: " << density(n) << endl;
     cout << "moran probability: "
          << moran_probability(parameters.mutantFitness()

@@ -11,6 +11,7 @@ ghostviewCommand gv
 ghostviewUpdateStrategy signal
 
 print_stuff true
+print_adjacency_matrix true
 
 # for hill climbing
 trialsForLocalOptimum 200

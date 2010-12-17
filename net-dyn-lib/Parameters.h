@@ -134,6 +134,9 @@ public:
   // whether to print information to the terminal
   DECLARE_PARAM(bool,print_stuff)
 
+  // if so, including the big matrix?
+  DECLARE_PARAM(bool,print_adjacency_matrix)
+
   // what experiment to do
   //typedef enum { OPTIMIZE, SAMPLE } experiment_t;
   DECLARE_PARAM(string,experiment)
