@@ -339,7 +339,9 @@ public:
   virtual void afterSetting(void)
   { string dumpfile = 
       outputDirectory()+"/"+paramsDumpFile();
-    mkpath(dumpfile.c_str());
+    int mp = mkpath(dumpfile.c_str());
+    if (mp)
+      perror("Creating output directory and settings file");
     ofstream dumpto(dumpfile.c_str());
     writeAllSettings(dumpto);
   }
