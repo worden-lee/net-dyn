@@ -229,6 +229,8 @@ public:
 
   //  --- for the fixation process
 
+  DECLARE_PARAM(bool, skipFixation)
+
   // if true, the contact process is:
   //   choose a parent weighted by fitness
   //   choose a child among the parent's out-neighbors, weighed by edge weight
