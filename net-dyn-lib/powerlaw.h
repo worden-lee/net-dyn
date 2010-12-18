@@ -64,10 +64,12 @@ public:
       do { xv = x(gen); } while (xv == 0);
       in_acc += (rel_degree = pow(xv,-in_exp));
       in_degree_dist->push_back(rel_degree);
+      cout << "pow(" << xv<< ',' << (-in_exp)<< ") = " << rel_degree << endl;
         
       do { xv = x(gen); } while (xv == 0);
       out_acc += (rel_degree = pow(xv,-out_exp));
       out_degree_dist->push_back(rel_degree);
+      cout << "pow(" << xv<< ',' << (-out_exp)<< ") = " << rel_degree << endl;
     }
 
     for (std::size_t i = 0; i != n; ++i) {
