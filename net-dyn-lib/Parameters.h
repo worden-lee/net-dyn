@@ -344,7 +344,10 @@ public:
       outputDirectory()+"/"+paramsDumpFile();
     int mp = mkpath(dumpfile.c_str());
     if (mp)
-      perror("Creating output directory and settings file");
+    { string perr = 
+          "Creating output directory and settings file " + dumpfile;
+      perror(perr.c_str());
+    }
     ofstream dumpto(dumpfile.c_str());
     writeAllSettings(dumpto);
   }
