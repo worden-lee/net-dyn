@@ -77,17 +77,13 @@ public:
 
     // short lived hack here!
     extern NetworkExperimentParameters parameters;
-    CSVDisplay nodes_csv(parameters.outputDirectory()+"/pldeg.csv");
-    //nodes_csv << "vertex" << "p" << "in degree" << "out degree";
-    //nodes_csv.newRow();
-    for (std::size_t i = 0; i != n; ++i) {
-      nodes_csv << (*in_degree_dist)[i];
-    }
+    CSVDisplay nodes_csv(parameters.outputDirectory()+"/degree-dist.csv");
+    nodes_csv << "vertex" << "in degree" << "out degree";
     nodes_csv.newRow();
     for (std::size_t i = 0; i != n; ++i) {
-      nodes_csv << (*out_degree_dist)[i];
+      nodes_csv << i << (*in_degree_dist)[i] << (*out_degree_dist)[i];
+      nodes_csv.newRow();
     }
-    nodes_csv.newRow();
 
     next();
   }
