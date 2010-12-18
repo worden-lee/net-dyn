@@ -19,7 +19,8 @@ using namespace std;
 #include <boost/graph/random.hpp>
 #include <boost/graph/erdos_renyi_generator.hpp>
 #include <boost/graph/plod_generator.hpp>
-#include "powerlaw.h"
+//#include "powerlaw.h"
+#include "molloy-reed.h"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "network-mutation.h"
@@ -227,11 +228,18 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
   else if (igt == "POWER")
   { // scale-free random graph with specified exponents for
     // in and out degree distributions
+#if 0
     typedef powerlaw_iterator_fixed_density<rng_t,network_t> PLGen;
     copy(PLGen(n, rng, num_vertices(n),
                parameters.graph_density(), parameters.pl_in_exp(),
 	             parameters.pl_out_exp()),
          PLGen::end(), edge_inserter(n));
+#else
+    typedef power_law_molloy_reed_iterator<rng_t,network_t> PLGen;
+    copy(PLGen(rng, num_vertices(n), parameters.graph_density(),
+          parameters.pl_in_exp(), parameters.pl_out_exp()),
+         PLGen::end(), edge_inserter(n));
+#endif
   }
   else if (igt == "PLOD")
   { // power law out-degree random graph with given size and density
