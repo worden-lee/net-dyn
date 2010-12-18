@@ -77,7 +77,9 @@ public:
 
     // short lived hack here!
     extern NetworkExperimentParameters parameters;
-    CSVDisplay nodes_csv(parameters.outputDirectory()+"/degree-dist.csv");
+    string fn = parameters.outputDirectory()+"/degree-dist.csv";
+    cout << "Write to " << fn << endl;
+    CSVDisplay nodes_csv(fn);
     nodes_csv << "vertex" << "in degree" << "out degree";
     nodes_csv.newRow();
     for (std::size_t i = 0; i != n; ++i) {
