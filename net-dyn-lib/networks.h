@@ -230,7 +230,7 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
     typedef powerlaw_iterator_fixed_density<rng_t,network_t> PLGen;
     copy(PLGen(n, rng, num_vertices(n),
                parameters.graph_density(), parameters.pl_in_exp(),
-	       parameters.pl_out_exp()),
+	             parameters.pl_out_exp()),
          PLGen::end(), edge_inserter(n));
   }
   else if (igt == "PLOD")
@@ -245,7 +245,7 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
     }
     copy(PLGen(rng, num_vertices(n),
                parameters.pl_alpha(), pl_beta),
-	 PLGen(), edge_inserter(n));
+	       PLGen(), edge_inserter(n));
   }
   else if (igt == "CUSTOM")
   { const string *graphfile = parameters.get("custom_graph_file");

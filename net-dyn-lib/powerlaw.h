@@ -74,6 +74,19 @@ public:
       (*in_degree_dist)[i] /= in_acc;
       (*out_degree_dist)[i] /= out_acc;
     }
+
+    CSVDisplay nodes_csv(parameters.outputDirectory()+"/pldeg.csv");
+    //nodes_csv << "vertex" << "p" << "in degree" << "out degree";
+    //nodes_csv.newRow();
+    for (std::size_t i = 0; i != n; ++i) {
+      nodes_csv << (*in_degree_dist)[i];
+    }
+    nodes_csv.newRow();
+    for (std::size_t i = 0; i != n; ++i) {
+      nodes_csv << (*out_degree_dist)[i];
+    }
+    nodes_csv.newRow();
+
     next();
   }
 
