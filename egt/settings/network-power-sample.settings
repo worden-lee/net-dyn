@@ -4,8 +4,8 @@ initial_graph_type POWER
 n_vertices 40 # 8 # 400 # 150
 
 graph_density 0.10 # 0.25
-#pl_in_exp 1.5
-#pl_out_exp 2
+pl_in_exp 1.5
+pl_out_exp 2
 
 animate_estimates false # true
 
@@ -14,4 +14,4 @@ timesToTestFixation 40000
 require_strongly_connected true
 
 # to disable ghostview popcorn
-ghostviewCommand /bin/true
+hostviewCommand /bin/true
