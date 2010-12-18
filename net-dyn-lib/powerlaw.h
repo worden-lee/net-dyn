@@ -75,6 +75,8 @@ public:
       (*out_degree_dist)[i] /= out_acc;
     }
 
+    // short lived hack here!
+    extern NetworkExperimentParameters parameters;
     CSVDisplay nodes_csv(parameters.outputDirectory()+"/pldeg.csv");
     //nodes_csv << "vertex" << "p" << "in degree" << "out degree";
     //nodes_csv.newRow();
