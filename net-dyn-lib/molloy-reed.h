@@ -37,7 +37,7 @@ public:
   typedef void difference_type;
 
   molloy_reed_iterator() 
-    : in_stubs(), out_stubs(), current_index(0),
+    : in_stubs(), out_stubs(), current_index(-1),
       allow_self_loops(false) { }
 
   molloy_reed_iterator(RandomGenerator& gen,
@@ -46,18 +46,21 @@ public:
                        bool allow_self_loops = false)
     : in_stubs(new stubs_t), out_stubs(new stubs_t),
       current_index(0), allow_self_loops(allow_self_loops)
-  { unsigned n = accumulate(in_deg.begin(), in_deg.end(), 0);
+  { if (in_deg.size() != out_deg.size())
+      return; // got to agree on # of vertices
+    unsigned n = accumulate(in_deg.begin(), in_deg.end(), 0);
     if (n != accumulate(out_deg.begin(), out_deg.end(), 0))
-      return; // got to have matching total degree
-    if (n < 1)
-      return; // good luck with that
+      return; // got to agree on # of edges
 
-    vector<std::size_t> in_stubs, out_stubs;
-    for (std::size_t i = 0; i < n; ++i) {
-      in_stubs.insert(in_stubs.end(), in_deg[i], i);
-      out_stubs.insert(out_stubs.end(), out_deg[i], i);
+    for (std::size_t i = 0; i < in_deg.size(); ++i) {
+      //cout << in_deg[i] << ' '<< out_deg[i] << endl;
+      in_stubs->insert(in_stubs->end(), in_deg[i], i);
+      out_stubs->insert(out_stubs->end(), out_deg[i], i);
     }
-    random_shuffle(out_stubs.begin(), out_stubs.end());
+    boost::uniform_int<std::size_t> ui;
+    boost::variate_generator<RandomGenerator, boost::uniform_int<std::size_t> >
+      vgen(gen, ui);
+    random_shuffle(out_stubs->begin(), out_stubs->end(), vgen);
   }
 
   static molloy_reed_iterator &end(void)
@@ -66,7 +69,12 @@ public:
   }
 
   reference operator*() const
-  { return current_edge;
+  { if (0 <= current_index && current_index < in_stubs->size())
+    { //cout << "here's an edge: " << current_edge << endl;
+      return current_edge;
+    }
+    cerr << "bad molloy-reed iterator dereference" << endl;
+    return current_edge;
   }
     
   molloy_reed_iterator& operator++()
@@ -83,18 +91,23 @@ public:
 
 private:
   void next()
-  { do 
+  { do {
       ++current_index;
+    }
     while (!allow_self_loops && 
+        current_index < in_stubs->size() &&
         (*in_stubs)[current_index] == (*out_stubs)[current_index]);
-    current_edge = 
-      make_pair((*in_stubs)[current_index], (*out_stubs)[current_index]);
+    if (current_index < in_stubs->size())
+      current_edge = 
+        make_pair((*in_stubs)[current_index], (*out_stubs)[current_index]);
+    else
+      current_index = -1; // end
   }
 
   boost::shared_ptr<stubs_t> in_stubs;
   boost::shared_ptr<stubs_t> out_stubs;
   bool allow_self_loops;
-  std::size_t current_index;
+  int current_index;
   value_type current_edge;
 };
 
@@ -110,21 +123,51 @@ protected:
       RandomGenerator &gen)
   { std::vector<unsigned> degrees(n);
     boost::uniform_real<double> ur01(0.0, 1.0);
-    for (std::vector<unsigned>::iterator di = degrees.begin();
-          di != degrees.end(); ++di)
-    { // this wouldn't serve everyone - I want strongly connected graphs,
-      // so I don't allow any degrees to be 0.
-      do
-      { double x = ur01(gen);
-        *di = pow(x,1/(exp+1));
-      } while ( *di == 0 );
+    std::vector<double> rel_degrees(n);
+    // this wouldn't serve everyone - I want strongly connected graphs,
+    // so I don't allow any degrees to be 0.
+    // these are x0^(1-exp) and x1^(1-exp) where the degree is in [x0,x1]
+    // see http://mathworld.wolfram.com/RandomNumber.html
+    double x0x = 1, x1x = pow(n,1-exp);
+    for (std::size_t i = 0; i < n; ++i)
+    { do
+      { double y = ur01(gen);
+        double px = pow(x0x + (x1x-x0x)*y, 1/(1-exp));
+        rel_degrees[i] = px;
+        //cout << "pow " << (x0x + (x1x-x0x)*y) << ' ' << (1/(1-exp)) 
+        //    << " = " << px << endl;
+      } while ( rel_degrees[i] == 0 );
     }
-    double factor = 
-      n * density / accumulate(degrees.begin(), degrees.end(), 0);
-    for (std::vector<unsigned>::iterator di = degrees.begin();
-          di != degrees.end(); ++di)
-    { *di *= factor;
-    }
+    cout << "rel_degrees :";
+    for (std::size_t i = 0; i < n; ++i)
+      cout << ' ' << rel_degrees[i];
+    cout << endl;
+    // scale all degrees to produce correct # of edges
+    unsigned target = n * (n-1) * density / 2;
+    // binary search for a factor that will get us the right number
+    // of edges...
+    double low = 0;
+    double high = 2 * (target - n) /
+        (accumulate(rel_degrees.begin(), rel_degrees.end(), 0.0) - n);
+    unsigned edges;
+    do {
+      double factor = 0.5 * (high + low);
+      cout << "factor: " << factor << endl;
+      for (std::size_t i = 0; i < n; ++i)
+      { degrees[i] = 1 + (rel_degrees[i] - 1) * factor;
+      }
+      edges = accumulate(degrees.begin(), degrees.end(), 0);
+      cout << "total " << edges
+        << " of " << target << endl;
+      if ( edges < target )
+        low = factor;
+      else if (edges > target)
+        high = factor;
+    }  while (edges != target);
+    cout << "degrees :";
+    for (std::size_t i = 0; i < n; ++i)
+      cout << ' ' << degrees[i];
+    cout << endl;
     return degrees;
   }
 
