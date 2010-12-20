@@ -138,10 +138,10 @@ protected:
         //    << " = " << px << endl;
       } while ( rel_degrees[i] == 0 );
     }
-    cout << "rel_degrees :";
-    for (std::size_t i = 0; i < n; ++i)
-      cout << ' ' << rel_degrees[i];
-    cout << endl;
+    //cout << "rel_degrees :";
+    //for (std::size_t i = 0; i < n; ++i)
+    //  cout << ' ' << rel_degrees[i];
+    //cout << endl;
     // scale all degrees to produce correct # of edges
     unsigned target = n * (n-1) * density / 2;
     // binary search for a factor that will get us the right number
@@ -152,22 +152,22 @@ protected:
     unsigned edges;
     do {
       double factor = 0.5 * (high + low);
-      cout << "factor: " << factor << endl;
+      //cout << "factor: " << factor << endl;
       for (std::size_t i = 0; i < n; ++i)
       { degrees[i] = 1 + (rel_degrees[i] - 1) * factor;
       }
       edges = accumulate(degrees.begin(), degrees.end(), 0);
-      cout << "total " << edges
-        << " of " << target << endl;
+      //cout << "total " << edges
+      //  << " of " << target << endl;
       if ( edges < target )
         low = factor;
       else if (edges > target)
         high = factor;
     }  while (edges != target);
-    cout << "degrees :";
-    for (std::size_t i = 0; i < n; ++i)
-      cout << ' ' << degrees[i];
-    cout << endl;
+    //cout << "degrees :";
+    //for (std::size_t i = 0; i < n; ++i)
+    //  cout << ' ' << degrees[i];
+    //cout << endl;
     return degrees;
   }
 
