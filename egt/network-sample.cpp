@@ -83,77 +83,79 @@ main(int argc, char **argv)
   mean_absorption_time_indicator<typeof sind> at_ind(sind);
   mean_peak_before_extinction_indicator<typeof sind> mp_ind(sind);
 
-  network_component_status status = ::test_fixation_candidate(n);
-  if (status.flag != STRONGLY_CONNECTED)
-  { cout << "graph is not strongly connected.\n";
-    exit(0);
-  }
-  else
-    cout << "graph is strongly connected." << endl;
-
   double fixp = 0;
   network_selection_indicator<network_t,rng_t,ParamsClass>::fixation_stats_t
     stats;
-  if (!parameters.skipFixation()) {
+
+  network_component_status status = ::test_fixation_candidate(n);
+  if (status.flag != STRONGLY_CONNECTED)
+  { cout << "graph is not strongly connected.\n";
+    //exit(0);
+  }
+  else
+  { cout << "graph is strongly connected." << endl;
+
+    if (!parameters.skipFixation()) {
 #ifdef DISPLAY
-    // plot a picture of the graph
-    BoostDotGraphController<network_t,ParamsClass> opt_animation;
-    opt_animation.inheritParametersFrom(parameters);
-    if (parameters.n_vertices() < 50) // 40
-    { //displayfarm.installController(opt_animation);
-      opt_animation.add_vertex_property("color",
-        make_color_temperature(n));
-      //       opt_animation.add_vertex_property("fontcolor",
-      //         make_color_influence(n,indicator,parameters));
-      opt_animation.add_edge_property("style",
-        make_bool_string_property("bold","",belongs_to_a_2_loop<network_t>,n));
-      //opt_animation.params.setdisplayToScreen(
-      //  displayfarm.params.animate_optimization());
-      opt_animation.update(0,n);
-    }
-#endif
-    // now evaluate the simulation
-    fixp = sind(n);
-
-    // now get the simulation results, in detail
-    stats = sind.provide_stats(n);
-    if (parameters.print_stuff())
-    { cout << "fixation probability: " << fixp << '\n';
-      cout << "n of trials: " << stats.n_trials << '\n';
-      if (fixp > 0)
-      {
-        cout << "mean fixation time: "   << ft_ind(n) << '\n';
-        cout << "mean extinction time: " << et_ind(n) << '\n';
-        cout << "mean absorption time: " << at_ind(n) << '\n';
-        cout << "mean peak before extinction: " << mp_ind(n) << '\n';
-        cout << "biggest peak before extinction: "
-             << stats.max_peakbeforeextinction << '\n';
+      // plot a picture of the graph
+      BoostDotGraphController<network_t,ParamsClass> opt_animation;
+      opt_animation.inheritParametersFrom(parameters);
+      if (parameters.n_vertices() < 50) // 40
+      { //displayfarm.installController(opt_animation);
+        opt_animation.add_vertex_property("color",
+          make_color_temperature(n));
+        //       opt_animation.add_vertex_property("fontcolor",
+        //         make_color_influence(n,indicator,parameters));
+        opt_animation.add_edge_property("style",
+          make_bool_string_property("bold","",belongs_to_a_2_loop<network_t>,n));
+        //opt_animation.params.setdisplayToScreen(
+        //  displayfarm.params.animate_optimization());
+        opt_animation.update(0,n);
       }
-    }
+#endif
+      // now evaluate the simulation
+      fixp = sind(n);
 
-    if (fixp > 0)
-    { // record the results
-      CSVDisplay network_csv(parameters.outputDirectory()+"/network.csv");
-      // record other measures like mu_{-1} ?
-      network_csv << "nv" << "in_exp" << "out_exp" << "density" << "mutuality"
-                  << "p" << "accuracy" << "moran_probability";
-      for (int i = -2; i <= 2; ++i)
-        for (int j = -2; j <= 2; ++j)
-          if (i != 0 || j != 0)
-            network_csv << stringf("mu.%d.%d",i,j);
-      network_csv.newRow();
-      network_csv << parameters.n_vertices() << parameters.pl_in_exp()
-                  << parameters.pl_out_exp() << density(n) << mutuality_ind(n)
-                  << fixp << stats.fixation_accuracy()
-                  << moran_probability(parameters.mutantFitness()
-                                       /parameters.residentFitness(),
-                                       parameters.n_vertices());
-      for (int i = -2; i <= 2; ++i)
-        for (int j = -2; j <= 2; ++j)
-          if (i != 0 || j != 0)
-            network_csv << degree_moment(n,i,j);
-      network_csv.newRow();
+      // now get the simulation results, in detail
+      stats = sind.provide_stats(n);
+      if (parameters.print_stuff())
+      { cout << "fixation probability: " << fixp << '\n';
+        cout << "n of trials: " << stats.n_trials << '\n';
+        if (fixp > 0)
+        {
+          cout << "mean fixation time: "   << ft_ind(n) << '\n';
+          cout << "mean extinction time: " << et_ind(n) << '\n';
+          cout << "mean absorption time: " << at_ind(n) << '\n';
+          cout << "mean peak before extinction: " << mp_ind(n) << '\n';
+          cout << "biggest peak before extinction: "
+               << stats.max_peakbeforeextinction << '\n';
+        }
+      }
 
+      if (fixp > 0)
+      { // record the results
+        CSVDisplay network_csv(parameters.outputDirectory()+"/network.csv");
+        // record other measures like mu_{-1} ?
+        network_csv << "nv" << "in_exp" << "out_exp" << "density" << "mutuality"
+                    << "p" << "accuracy" << "moran_probability";
+        for (int i = -2; i <= 2; ++i)
+          for (int j = -2; j <= 2; ++j)
+            if (i != 0 || j != 0)
+              network_csv << stringf("mu.%d.%d",i,j);
+        network_csv.newRow();
+        network_csv << parameters.n_vertices() << parameters.pl_in_exp()
+                    << parameters.pl_out_exp() << density(n) << mutuality_ind(n)
+                    << fixp << stats.fixation_accuracy()
+                    << moran_probability(parameters.mutantFitness()
+                                         /parameters.residentFitness(),
+                                         parameters.n_vertices());
+        for (int i = -2; i <= 2; ++i)
+          for (int j = -2; j <= 2; ++j)
+            if (i != 0 || j != 0)
+              network_csv << degree_moment(n,i,j);
+        network_csv.newRow();
+
+      }
     }
   }
 
