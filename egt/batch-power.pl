@@ -1,8 +1,10 @@
 #!/usr/bin/perl
 use File::Path;
+use File::Spec::Functions qw(rel2abs);
+use File::Basename;
 
 my $reps = 10000;
-my @exprange = (1.0,3.0);
+my @exprange = (1.1,3.0);
 my $expstep = 0.1;
 
 my @explist =
@@ -10,6 +12,8 @@ my @explist =
 
 my $pwd = `pwd`;
 chomp($pwd);
+
+my $code_dir = dirname(rel2abs($0));
 
 my $experiment = "network-power-sample";
 my $outdir = "$pwd/batch-data/$experiment";
@@ -32,7 +36,7 @@ for my $i (1 .. $reps)
       next if (-e $dest);
       if (!-e "out") { mkdir("out") or die "couldn't mkdir out"; }
       system("rm -rf out/*");
-      my $comm = "./network-sample -f settings/$experiment.settings ".
+      my $comm = "$code_dir/network-sample -f settings/$experiment.settings ".
         join("", map {" --$_" } @extra_args);
       print "$comm\n";
       system($comm) == 0 or die "error running $comm";
