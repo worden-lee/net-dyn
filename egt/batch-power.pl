@@ -36,7 +36,7 @@ for my $i (1 .. $reps)
       next if (-e $dest);
       if (!-e "out") { mkdir("out") or die "couldn't mkdir out"; }
       system("rm -rf out/*");
-      my $comm = "$code_dir/network-sample -f settings/$experiment.settings ".
+      my $comm = "$code_dir/network-sample -f $code_dir/settings/$experiment.settings ".
         join("", map {" --$_" } @extra_args);
       print "$comm\n";
       system($comm) == 0 or die "error running $comm";
