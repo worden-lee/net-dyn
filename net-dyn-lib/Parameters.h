@@ -329,6 +329,7 @@ public:
     if (!get("randSeed"))
       setrandSeed(time(0)*getpid());
   }
+  static string dirname_for_settings;
   void parseSettingsFile(string filename);
   void parseSettings(istream &);
   virtual string cleanLine(string);
