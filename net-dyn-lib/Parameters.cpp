@@ -8,6 +8,7 @@
 void Parameters::handleArgs(int argc, char **argv)
 { static string dirname_for_settings;
   dirname_for_settings = dirname(argv[0]);
+  cout << "Executable directory is " << dirname_for_settings << endl;
   for ( ++argv; (*argv); ++argv )
   {
     string arg(*argv);
