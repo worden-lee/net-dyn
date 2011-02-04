@@ -6,8 +6,8 @@
 #include <libgen.h>
 
 void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
-{ Parameters::dirname_for_settings = dirname(argv[0]);
-  cout << "Executable directory is " << Parameters::dirname_for_settings << endl;
+{ setdirnameForSettings(dirname(argv[0]));
+  cout << "Executable directory is " << dirnameForSettings() << endl;
   if (init_settings != 0)
     parseSettingsFile(init_settings);
   for ( ++argv; (*argv); ++argv )
@@ -36,7 +36,7 @@ void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
 }
 
 void Parameters::parseSettingsFile(string filename)
-{ string pathname = Parameters::dirname_for_settings + '/' + filename;
+{ string pathname = dirnameForSettings() + '/' + filename;
   cout << "parseSettingsFile(\"" << pathname << "\")\n";
   ifstream settings(pathname.c_str());
   if (settings.is_open())

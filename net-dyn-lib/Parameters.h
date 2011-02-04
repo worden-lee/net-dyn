@@ -131,6 +131,9 @@ public:
 
   //  --- global stuff
 
+  // settings/ directory is presumed to be where the executable is
+  DECLARE_PARAM(string, dirnameForSettings)
+
   // whether to print information to the terminal
   DECLARE_PARAM(bool,print_stuff)
 
@@ -329,7 +332,6 @@ public:
     if (!get("randSeed"))
       setrandSeed(time(0)*getpid());
   }
-  static string dirname_for_settings;
   void parseSettingsFile(string filename);
   void parseSettings(istream &);
   virtual string cleanLine(string);
