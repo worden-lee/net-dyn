@@ -22,8 +22,8 @@ OBJS = $(_OINT:.c=.o)
 
 NETDYNLIB = $(NETDYNDIR)/libnet-dyn.a
 
-$(NETDYNLIB) :
-	(cd $(NETDYNDIR) && $(MAKE))
+$(NETDYNLIB) : /proc/uptime
+	$(MAKE) -C $(NETDYNDIR)
 
 sensitivity : sensitivity.o $(NETDYNLIB)
 	$(CXX) $(CFLAGS) $< $(LDFLAGS) -o $@

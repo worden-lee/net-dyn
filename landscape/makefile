@@ -31,8 +31,8 @@ SLOBJ = $(SLSRC:.cpp=.o)
 	        -e '/^$$/ d' -e 's/$$/ :/' < $*.d >> $*.P; \
 	    rm -f $*.d
 
-../network/% :
-	(cd ../network; $(MAKE) $@)
+../network/% : /proc/uptime
+	$(MAKE) -C ../network $*
 
 SLDEP = $(SLOBJ:.o=.P)
 
