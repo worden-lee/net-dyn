@@ -3,9 +3,11 @@
 #include <list>
 #include <algorithm>
 #include <functional>
+#include <libgen.h>
 
 void Parameters::handleArgs(int argc, char **argv)
-{
+{ static string dirname_for_settings;
+  dirname_for_settings = dirname(argv[0]);
   for ( ++argv; (*argv); ++argv )
   {
     string arg(*argv);
@@ -20,7 +22,7 @@ void Parameters::handleArgs(int argc, char **argv)
       string line(arg,2,string::npos);
       string::size_type eq = line.find('=');
       if (eq != string::npos)
-	line[eq] = ' ';
+        line[eq] = ' ';
       //cout << line << endl;
       parseLine(line);
     }
@@ -32,13 +34,14 @@ void Parameters::handleArgs(int argc, char **argv)
 }
 
 void Parameters::parseSettingsFile(string filename)
-{
-  cout << "parseSettingsFile(\"" << filename << "\")\n";
-  ifstream settings(filename.c_str());
+{ static string dirname_for_settings;
+  string pathname = dirname_for_settings + '/' + filename;
+  cout << "parseSettingsFile(\"" << pathname << "\")\n";
+  ifstream settings(pathname.c_str());
   if (settings.is_open())
     parseSettings(settings);
   else
-  { cout << "couldn't open " << filename << endl;
+  { cout << "couldn't open " << pathname << endl;
     exit(-1);
   }
 }
