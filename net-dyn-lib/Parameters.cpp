@@ -36,7 +36,9 @@ void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
 }
 
 void Parameters::parseSettingsFile(string filename)
-{ string pathname = dirnameForSettings() + '/' + filename;
+{ string pathname = filename;
+  if (pathname[0] != '/')
+   pathname = dirnameForSettings() + '/' + pathname;
   cout << "parseSettingsFile(\"" << pathname << "\")\n";
   ifstream settings(pathname.c_str());
   if (settings.is_open())
