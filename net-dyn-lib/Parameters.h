@@ -338,7 +338,7 @@ public:
   virtual void writeAllSettings(ostream&);
 
   // read settings and file inclusions from command line invocation
-  virtual void handleArgs(int argc, char **argv);
+  virtual void handleArgs(int argc, char **argv, const char *init_settings=0);
 
   // this is called after all settings are read in
   virtual void afterSetting(void)

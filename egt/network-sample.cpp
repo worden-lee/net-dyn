@@ -47,8 +47,7 @@ main(int argc, char **argv)
 {  
   // ===== initialize =====
 
-  parameters.loadDefaults("settings/defaults-network.settings");
-  parameters.handleArgs(argc,argv);
+  parameters.handleArgs(argc,argv,"settings/defaults-network.settings");
   parameters.afterSetting();
 
   rng.seed(parameters.randSeed());

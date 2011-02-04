@@ -27,8 +27,7 @@ int main(int argc, char**argv)
   // ===== initialize =====
 
   LParameters parameters;
-  parameters.loadDefaults("settings/default.settings");
-  parameters.handleArgs(argc,argv);
+  parameters.handleArgs(argc,argv,"settings/default.settings");
   parameters.afterSetting();
 
   boost::minstd_rand rng;

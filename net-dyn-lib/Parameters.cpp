@@ -5,10 +5,12 @@
 #include <functional>
 #include <libgen.h>
 
-void Parameters::handleArgs(int argc, char **argv)
+void Parameters::handleArgs(int argc, char **argv, const char *init_settings=0)
 { static string dirname_for_settings;
   dirname_for_settings = dirname(argv[0]);
   cout << "Executable directory is " << dirname_for_settings << endl;
+  if (init_settings != 0)
+    parseSettingsFile(init_settings);
   for ( ++argv; (*argv); ++argv )
   {
     string arg(*argv);

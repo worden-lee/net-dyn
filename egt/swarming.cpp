@@ -113,8 +113,7 @@ void do_experiment(swp_t&swp, sind_t&sind, rng_t&rng)
 
 int main(int argc, char **argv)
 {
-  parameters.loadDefaults("settings/defaults-swarming.settings");
-  parameters.handleArgs(argc,argv);
+  parameters.handleArgs(argc,argv,"settings/defaults-swarming.settings");
   parameters.afterSetting();
 
   rng_t rng;
