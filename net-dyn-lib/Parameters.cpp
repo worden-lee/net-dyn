@@ -5,7 +5,7 @@
 #include <functional>
 #include <libgen.h>
 
-void Parameters::handleArgs(int argc, char **argv, const char *init_settings=0)
+void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
 { static string dirname_for_settings;
   dirname_for_settings = dirname(argv[0]);
   cout << "Executable directory is " << dirname_for_settings << endl;
