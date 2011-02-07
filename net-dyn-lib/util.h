@@ -212,8 +212,11 @@ inline int mkpath(const char *path)
   int ret;
   while(*it)
   { if (*it == '/')
-    { *bit=0;
-      ret = mkdir(buf,0755);
+    { struct stat st;
+      *bit=0;
+      ret = 0;
+      if (stat(buf, &st) && errno == ENOENT)
+        ret = mkdir(buf,0755);
       if (ret)
         return ret;
     }
