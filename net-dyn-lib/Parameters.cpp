@@ -9,7 +9,7 @@ void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
 { setdirnameForSettings(dirname(argv[0]));
   cout << "Executable directory is " << dirnameForSettings() << endl;
   if (init_settings != 0)
-    parseSettingsFile(init_settings);
+    loadDefaults(init_settings);
   for ( ++argv; (*argv); ++argv )
   {
     string arg(*argv);
