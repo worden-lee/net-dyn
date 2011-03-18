@@ -2,7 +2,8 @@
 
 # what directory to look in?
 
-load.batch.results <- function(path="batch-data",target="network.csv")
+load.batch.results <- function(path="batch-data",target="network.csv",
+    verbose=FALSE)
 { # list the relevant files under that directory
   cat("expanding list of files in (",path,")\n");
   files <- dir(path,pattern=target,recursive=TRUE, full.names=TRUE);
@@ -11,7 +12,9 @@ load.batch.results <- function(path="batch-data",target="network.csv")
   #{ files <- files[1:1000]; }
   all.rows <- NULL;
   for (f in files)
-  { cat(f,"\n");
+  { if (verbose) {
+      cat(f,"\n");
+    }
     fd <- read.csv(f,header=TRUE);
     rep <- sub("^.*out.([^/]*)/.*$","\\1",f);
     fd <- cbind(data.frame(rep=rep),fd);
