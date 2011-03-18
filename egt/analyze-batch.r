@@ -5,9 +5,10 @@
 load.batch.results <- function(path="batch-data",target="network.csv",
     verbose=FALSE)
 { # list the relevant files under that directory
-  cat("expanding list of files in (",path,")\n");
   files <- dir(path,pattern=target,recursive=TRUE, full.names=TRUE);
-  cat("found ",length(files)," files\n");
+  if ( verbose ) {
+    cat("found ",length(files)," files in ",path,"\n");
+  }
   #if (length(files) > 1000)
   #{ files <- files[1:1000]; }
   all.rows <- NULL;

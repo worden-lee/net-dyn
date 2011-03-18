@@ -16,7 +16,8 @@ chomp($pwd);
 my $code_dir = dirname(rel2abs($0));
 
 my $experiment = "network-power-sample";
-my $outdir = "$pwd/batch-data/$experiment";
+my $batchdir = "$pwd/batch-data"
+my $outdir = "$batchdir/$experiment";
 
 if (!-e $outdir)
 { mkpath($outdir) or die "couldn't create $outdir";
@@ -50,3 +51,7 @@ for my $i (1 .. $reps)
     }
   }
 }
+
+# touch the main output directory - useful for make rules sometimes
+$now = time;
+utime $now, $now, $batchdir;
