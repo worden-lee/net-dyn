@@ -16,7 +16,7 @@ chomp($pwd);
 my $code_dir = dirname(rel2abs($0));
 
 my $experiment = "network-power-sample";
-my $batchdir = "$pwd/batch-data"
+my $batchdir = "$pwd/batch-data";
 my $outdir = "$batchdir/$experiment";
 
 if (!-e $outdir)
