@@ -32,6 +32,7 @@ residentFitness 1
 mutantFitness 1.2 #1.1
 # mutantFitness 0.9 # less than resident to select for drift
 max_n_vertices_for_matrix 15
+record_dynamics false
 animate_fixation false
 animate_estimates false
 record_fixation_dynamics true
