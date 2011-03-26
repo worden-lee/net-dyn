@@ -217,6 +217,10 @@ public:
 
   //  --- fixation experiments
 
+  // if true, record the time series of weighted moments of the
+  // network state for a representative realization
+  DECLARE_PARAM(bool, record_dynamics)
+
   // if true, display the evolutionary dynamics as the population
   // walks to fixation or extinction
   DECLARE_PARAM(bool, animate_fixation)

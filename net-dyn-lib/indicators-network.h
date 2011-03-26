@@ -1072,18 +1072,32 @@ public:
       hist_display.params.setrecordEvery(0);
       hist_display.setTitle(0,"conditional prob of fixation");
     }
-#endif
 
     // update raw data for histogram at each step
     //typename selind::fixation_stats &nc = selind::cache[cache_key(n)];
     vector<int> history;
-#ifdef DISPLAY
     if(animate)
     {//  nc.histogram_success.resize(nv+1);
 //       nc.histogram_failure.resize(nv+1);
       history.push_back(n_infected);
     }
 #endif
+    static bool recorded = false;
+    bool record_dynamics = params.record_dynamics() && !recorded;
+    CSVDisplay dynamics_csv(parameters.outputDirectory() + "/dynamics.csv");
+    if (record_dynamics)
+    { dynamics_csv << "t";
+      recorded = true;
+      for (int i = -2; i <= 2; ++i)
+        for (int j = -2; j <= 2; ++j)
+          dynamics_csv << ("omega." + i + '.' + j);
+      dynamics_csv.newRow();
+      dynamics_csv << clock;
+      for (int i = -2; i <= 2; ++i)
+        for (int j = -2; j <= 2; ++j)
+          dynamics_csv << weighted_moment(n,i,j,state);
+      dynamics_csv.newRow();
+    }
 
     // do infection process until fixation, extinction or timeout
     while (0 < n_infected && n_infected < nv &&
@@ -1131,15 +1145,15 @@ public:
       // now copy the parent's state to the child.
       if (state[child] == 1)
       { if (state[parent] == 0)
-	{ state[child] = 0;
-	  --n_infected;
+        { state[child] = 0;
+          --n_infected;
         }
       }
       else
       { if (state[parent] == 1)
         { state[child] = 1;
-	  ++n_infected;
-	}
+          ++n_infected;
+        }
       }
 
       // update counters
@@ -1168,6 +1182,13 @@ public:
         fixationDisplay.update(clock,n);
       }
 #endif
+      if (record_dynamics)
+      { dynamics_csv << clock;
+        for (int i = -2; i <= 2; ++i)
+          for (int j = -2; j <= 2; ++j)
+            dynamics_csv << weighted_moment(n,i,j,state);
+        dynamics_csv.newRow();
+      }
     }// while n_infected
 
     // we're out of the loop, update everything and return
