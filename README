@@ -1,4 +1,2 @@
-Migrating from cvs to git.  CVS working directory for simulation/netwerk
-should be abandoned, git repo at $sw:working/simulation/netwerk-git is the
-stable repository, and there's a clone of it on my laptop for active
-development.
+This was once a CVS repository on $sw, my server, and then it was a git
+repo on $sw, but now its home is git@github.com:worden-lee/net-dyn.git.
