@@ -586,6 +586,18 @@ inline bool is_connected(const VertexListGraph& g, VertexColorMap color)
   return true;
 }
 
+// very simple quick exponentiation for just the cases we need
+double index_power(int i, int n)
+{ switch(n) 
+  { case 0: return 1;
+    case 1: return i;
+    case 2: return i*i;
+    case -1: return 1.0 / i;
+    case -2: return 1.0 / (i*i);
+    default: return 0;
+  }
+}
+
 // moments of degree distribution
 // degree_moment(i,j) = sum_x in(x)^i out(x)^j / N
 template<typename network_t>
@@ -594,8 +606,26 @@ double degree_moment(const network_t&n, int i, int j)
   typename graph_traits<network_t>::vertex_iterator 
     vi, vi_end;
   for (tie(vi, vi_end) = vertices(n); vi != vi_end; ++vi)
-    accum += pow(double(in_degree(*vi,n)),i)*pow(double(out_degree(*vi,n)),j);
+    accum += index_power(in_degree(*vi,n),i)*index_power(out_degree(*vi,n),j);
+    //accum += pow(double(in_degree(*vi,n)),i)*pow(double(out_degree(*vi,n)),j);
   return accum / num_vertices(n);
+}
+
+// degree-weighted moments of network state
+// weighted_moment(m,n)
+//   = sum_x state(x) in(x)^m out(x)^n / sum_x in(x)^m out(x)^n
+template<typename network_t, typename state_t>
+double weighted_moment(const network_t&net; int m, int n, state_t &state)
+{ double numer = 0, denom = 0;
+  typename graph_traits<network_t>::vertex_iterator 
+    vi, vi_end;
+  for (tie(vi, vi_end) = vertices(net); vi != vi_end; ++vi)
+  { double ixmoxn = 
+      index_power(in_degree(*vi,net),m)*index_power(out_degree(*vi,net),n);
+    numer += state[*vi] * ixmoxn;
+    denom += ixmoxn;
+  }
+  return numer / denom;
 }
 
 // functions to evaluate whether a graph is capable of fixation.
