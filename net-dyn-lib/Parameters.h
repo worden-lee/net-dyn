@@ -269,6 +269,13 @@ public:
   // and then this is that mutant fitness
   DECLARE_PARAM(double, perturbed_mutant_fitness)
 
+  // if this is assigned, don't mutate one vertex, do all the vertices
+  // above/below a certain degree.  values are "low-in", "high-out", etc.
+  DECLARE_PARAM(string, initial_configuration)
+
+  // and if you set that, set this too
+  DECLARE_PARAM(unsigned, initial_configuration_threshold)
+
   //  --- monte carlo fixation
 
   // simulate introduction and possible fixation this many times at a

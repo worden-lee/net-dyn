@@ -867,6 +867,7 @@ public:
         return true;
       }
       // else
+      cout << "Graph is not strongly connected, but accepting anyway." << endl;
       return false;
     }
   }
@@ -1058,34 +1059,47 @@ public:
     update_rule = params.update_rule();
     int maxsteps = params.maxStepsToFixation();
 
+    // counter of number of infected vertices
+    typename network_t::vertices_size_type n_infected = 0;
+
     fill(state.begin(),state.end(),0);
 
     // is there a special initial arrangement of mutants?
-    const char *special_init = params.get("initial_configuration");
+    const string *special_init = params.get("initial_configuration");
     if ( !special_init ) // no, initial state is all residents but one
-      state[mutation] = 1;
+    { state[mutation] = 1;
+      ++n_infected;
+    }
     else 
     { unsigned thresh = params.initial_configuration_threshold();
-      if (special_init == "low-in")
+      if (*special_init == "low-in")
       { typename graph_traits<network_t>::vertex_iterator vi,vend;
         for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
           if (in_degree(*vi,n) < thresh)
-            state[*vi] = 1;
-      } else if (special_init =="high-in")
+          { state[*vi] = 1;
+            ++n_infected;
+          }
+      } else if (*special_init =="high-in")
       { typename graph_traits<network_t>::vertex_iterator vi,vend;
         for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
           if (in_degree(*vi,n) >= thresh)
-            state[*vi] = 1;
-      } else if (special_init =="low-out")
+          { state[*vi] = 1;
+            ++n_infected;
+          }
+      } else if (*special_init =="low-out")
       { typename graph_traits<network_t>::vertex_iterator vi,vend;
         for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
           if (out_degree(*vi,n) < thresh)
-            state[*vi] = 1;
-      } else if (special_init =="high-out")
+          { state[*vi] = 1;
+            ++n_infected;
+          }
+      } else if (*special_init =="high-out")
       { typename graph_traits<network_t>::vertex_iterator vi,vend;
         for (tie(vi,vend) = vertices(n); vi != vend; ++vi)
           if (out_degree(*vi,n) >= thresh)
-            state[*vi] = 1;
+          { state[*vi] = 1;
+            ++n_infected;
+          }
       }
     }
 
@@ -1097,8 +1111,6 @@ public:
     fitness_ind_t fitness_ind(res_fitness_ind, stind, 1,
                               mut_fitness_ind);
 
-    // counter of number of infected vertices
-    typename network_t::vertices_size_type n_infected = 1;
     // counter of reproduction events
     int n_steps = 0;
     // clock runs slower than n_steps, providing a time axis that

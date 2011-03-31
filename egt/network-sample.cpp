@@ -87,12 +87,14 @@ main(int argc, char **argv)
     stats;
 
   network_component_status status = ::test_fixation_candidate(n);
-  if (status.flag != STRONGLY_CONNECTED)
+  if (parameters.require_strongly_connected() and 
+      status.flag != STRONGLY_CONNECTED)
   { cout << "graph is not strongly connected.\n";
     //exit(0);
   }
   else
-  { cout << "graph is strongly connected." << endl;
+  { if (status.flag == STRONGLY_CONNECTED)
+      cout << "graph is strongly connected." << endl;
 
     if (!parameters.skipFixation()) {
 #ifdef DISPLAY

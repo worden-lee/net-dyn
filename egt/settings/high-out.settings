@@ -1,0 +1,3 @@
+include settings/big-power-network.settings
+
+initial_configuration high-out
