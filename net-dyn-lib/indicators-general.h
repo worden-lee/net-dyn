@@ -368,7 +368,8 @@ double moran_probability(double r, double n)
 { return (1 - 1/r) / (1 - pow(r,-n));
 }
 
-#if 1  // now defined by boost library
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 104000
 #include "boost/graph/property_maps/constant_property_map.hpp"
 #else
 //this is modeled after boost's identity_property_map
