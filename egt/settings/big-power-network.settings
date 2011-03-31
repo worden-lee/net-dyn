@@ -8,3 +8,4 @@ require_strongly_connected false
 timesToTestFixation 1
 
 initial_configuration_threshold 8
+print_adjacency_matrix false
