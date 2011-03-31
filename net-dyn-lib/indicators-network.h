@@ -615,7 +615,7 @@ double degree_moment(const network_t&n, int i, int j)
 // weighted_moment(m,n)
 //   = sum_x state(x) in(x)^m out(x)^n / sum_x in(x)^m out(x)^n
 template<typename network_t, typename state_t>
-double weighted_moment(const network_t&net; int m, int n, state_t &state)
+double weighted_moment(const network_t&net, int m, int n, state_t &state)
 { double numer = 0, denom = 0;
   typename graph_traits<network_t>::vertex_iterator 
     vi, vi_end;
@@ -1113,14 +1113,15 @@ public:
     }
 #endif
     static bool recorded = false;
-    bool record_dynamics = params.record_dynamics() && !recorded;
-    CSVDisplay dynamics_csv(parameters.outputDirectory() + "/dynamics.csv");
+    bool record_dynamics = !recorded && params.record_dynamics();
+    recorded = true;
+    CSVDisplay dynamics_csv;
     if (record_dynamics)
-    { dynamics_csv << "t";
-      recorded = true;
+    { dynamics_csv.openFile(params.outputDirectory() + "/dynamics.csv");
+      dynamics_csv << "t";
       for (int i = -2; i <= 2; ++i)
         for (int j = -2; j <= 2; ++j)
-          dynamics_csv << ("omega." + i + '.' + j);
+          dynamics_csv << stringf("omega.%d.%d", i, j);
       dynamics_csv.newRow();
       dynamics_csv << clock;
       for (int i = -2; i <= 2; ++i)

@@ -33,7 +33,7 @@ public:
 
   // open a file, if there's not one loaded already
   void openFile(string filename) {
-    if (logfile) {
+    if (logfile.is_open()) {
       cerr << "CSVDisplay::openFile called, but a file is already open!\n";
     } else {
       logfile.open(filename.c_str());
