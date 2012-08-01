@@ -350,6 +350,7 @@ public:
 
   // write them back out to a file
   virtual void writeAllSettings(ostream&);
+	virtual void writeAllSettingsAsCSV(ostream&);
 
   // read settings and file inclusions from command line invocation
   virtual void handleArgs(int argc, char **argv, const char *init_settings=0);

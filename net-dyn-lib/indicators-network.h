@@ -22,7 +22,7 @@
 #include <boost/graph/random.hpp>
 #include <boost/graph/strong_components.hpp>
 #include <boost/graph/betweenness_centrality.hpp>
-#include <boost/vector_property_map.hpp>
+#include <boost/property_map/vector_property_map.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <numeric>
 #include <sstream>
@@ -757,6 +757,7 @@ choose_weighted(_Iterator first, _Iterator end, _Map &weights,
 		_RNG &rng, double total_weight=-1)
 { if (total_weight <= 0)
     total_weight = accumulate_mapped(first,end,0.0,weights);
+	typedef boost::variate_generator<_RNG&, boost::uniform_real<> > ur_t;
   ur_t choose_01(rng,uniform_real<>());
   double cumul = choose_01() * total_weight;
   for (; first != end; ++first)
@@ -919,7 +920,8 @@ public:
         child = *ci;
       }
       else
-      { ui_t choose_a_child(this->rng,uniform_int<>(0,n_children-1));
+      { typedef boost::variate_generator<RNG_t&, boost::uniform_int<> > ui_t;
+				ui_t choose_a_child(this->rng,uniform_int<>(0,n_children-1));
         int child_selection = choose_a_child();
 	for(tie(ci,cend) = adjacent_vertices(parent,n);
 	    ci != cend; ++ci)
@@ -990,7 +992,8 @@ public:
         parent = *pi;
       }
       else
-      { ui_t choose_a_parent(this->rng,uniform_int<>(0,n_parents-1));
+      { typedef boost::variate_generator<RNG_t&, boost::uniform_int<> > ui_t;
+        ui_t choose_a_parent(this->rng,uniform_int<>(0,n_parents-1));
         int parent_selection = choose_a_parent();
 	for(tie(pi,pend) = inv_adjacent_vertices(child,n);
 	    pi != pend; ++pi)

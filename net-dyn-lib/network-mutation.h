@@ -321,6 +321,11 @@ public:
   }
 };
 
+// declared for real in Parameters.h
+template<typename params_t>
+class ObjectWithParameters;
+
+
 template<typename network_t, typename rng_t, typename params_t>
 class network_mutation_generator : public ObjectWithParameters<params_t>
 {
@@ -429,7 +434,8 @@ public:
   { return mutation_iterator(edges.end());
   }
   mutation random_mutation(network_t&n)
-  { // these parameter values are needed
+  { // where should this really go?
+		typedef boost::variate_generator<rng_t&, boost::uniform_real<> > ur_t;
     ur_t choose_01(rng,uniform_real<>());
     double choice = choose_01();
     double toggle_edge_prob = this->toggle_edge_mutation_probability();

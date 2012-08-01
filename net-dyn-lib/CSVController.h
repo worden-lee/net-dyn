@@ -6,11 +6,13 @@
 #include <string>
 #include <fstream>
 #include <iostream>
+#include "Display.h"
+#include "DisplayController.h"
 
 class CSVDisplay : public Display
 {
 protected:
-  ofstream logfile;
+	std::ofstream logfile;
   bool onBlankLine;
   //  string myOutfile;
 
@@ -21,7 +23,7 @@ public:
   }
 
   // preferred constructor form - pass in the filename to use
-  CSVDisplay(string filename) {
+  CSVDisplay(std::string filename) {
     logfile.open(filename.c_str());
     onBlankLine = true;
     //    myOutfile = filename;
@@ -32,9 +34,9 @@ public:
 //   }
 
   // open a file, if there's not one loaded already
-  void openFile(string filename) {
+  void openFile(std::string filename) {
     if (logfile.is_open()) {
-      cerr << "CSVDisplay::openFile called, but a file is already open!\n";
+			std::cerr << "CSVDisplay::openFile called, but a file is already open!\n";
     } else {
       logfile.open(filename.c_str());
       onBlankLine = true;
@@ -43,14 +45,14 @@ public:
   }
 
   // write a whole line (i.e., header data)
-  void writeLine(const string line) {
+  void writeLine(const std::string line) {
     if (!logfile) {
-       cerr << "CSVDisplay::writeLine called, but no logfile is open!\n";
+			std::cerr << "CSVDisplay::writeLine called, but no logfile is open!\n";
     }
     logfile << line;
     // check if the line included a newline, and write as needed
-    string::const_reverse_iterator lastchar = line.rbegin();
-    if (*lastchar != '\n') logfile << endl;
+		std::string::const_reverse_iterator lastchar = line.rbegin();
+    if (*lastchar != '\n') logfile << std::endl;
     onBlankLine = true;
   }
 
@@ -59,11 +61,11 @@ public:
   CSVDisplay& operator<<(const double& data) { 
     if (&data == 0 || data == HUGE) {
       // HUGE: the international code for "it's broken!"
-      *this << string("NA");
+      *this << std::string("NA");
       return *this;
     }
     if (!logfile) {
-      cerr << "CSVDisplay::<< called, but no logfile is open!\n";
+			std::cerr << "CSVDisplay::<< called, but no logfile is open!\n";
     }
     if (onBlankLine) {
       onBlankLine = false;
@@ -74,9 +76,9 @@ public:
     return *this;
   }
 
-  CSVDisplay& operator<<(const string data) {
+  CSVDisplay& operator<<(const std::string data) {
     if (!logfile) {
-      cerr << "CSVDisplay::<< called, but no logfile is open!\n";
+			std::cerr << "CSVDisplay::<< called, but no logfile is open!\n";
     }
     if (onBlankLine) {
       onBlankLine = false;
@@ -90,9 +92,14 @@ public:
   // start a new row of data
   // writes a new line only if we're not on a fresh line
   void newRow() {
-    logfile << endl;
+    logfile << std::endl;
     onBlankLine = true;
   }
+
+	// note csvdisplay << endl also implements newRow().
+	// code for this below.
+	CSVDisplay& operator<<(CSVDisplay &(*__manip)(CSVDisplay &))
+	{ return __manip(*this); }
 
 public:
   // included for compatibility, but I don't think these should be
@@ -104,6 +111,14 @@ public:
     logfile.flush();
   }
 };
+
+namespace std {
+// csvdisplay << endl is equivalent to csvdisplay.newRow().
+CSVDisplay &endl(CSVDisplay &__disp)
+{ __disp.newRow(); 
+	return __disp;
+}
+}
 
 template<typename ParamsClass>
 class CSVController : public DisplayController<CSVDisplay,ParamsClass>
@@ -129,12 +144,12 @@ public:
 
   void createDisplay()
   { mkdir(outdir().c_str(), S_IRWXU|S_IRWXG|S_IRWXO);
-    string communityOutfile = outdir() + "/community-log.csv";
+		std::string communityOutfile = outdir() + "/community-log.csv";
     display = new CSVDisplay(communityOutfile);
     display->writeLine("temp,eco_t,evo_t,n_equil,n_species,n_resources,dT/dmaxT");
   }
 
-  string outdir(){
+	std::string outdir(){
     return ParamsClass::outputDirectory()+"/csv";
   }
   

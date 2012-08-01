@@ -18,6 +18,7 @@
 #include <vector>
 #include <map>
 #include <cmath>
+#include <numeric>
 
 // this template is for generating directed graphs whose in-degree and
 // out-degree distributions are both specified.

@@ -82,7 +82,7 @@ class sensitivity_simulation
 
     // replace *this with (*this or that)
     void or_with_other_clause(const node_state&that)
-    { // (x v T) is T
+    { // (T v x) is T
       // (x v F) is x
       if (is_T || that.is_F)
         return;

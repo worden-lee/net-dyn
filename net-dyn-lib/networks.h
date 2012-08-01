@@ -11,6 +11,7 @@
 # define   	NETWORKS_H_
 
 #include <iostream>
+#include <fstream>
 #include <vector>
 #include <deque>
 #include <string>
@@ -23,6 +24,7 @@ using namespace std;
 #include "molloy-reed.h"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
+#include <boost/random/linear_congruential.hpp>
 #include "network-mutation.h"
 #include "util.h"
 
@@ -69,7 +71,7 @@ void write_snapshot(boost::adjacency_list<A,B,C,D,E,F,G>&n,
 { string basename
     = params.outputDirectory()+"/snapshot-"+double_to_string(time);
   string graphname = basename + ".adjacency";
-  ofstream os((basename+".settings").c_str());
+	std::ofstream os((basename+".settings").c_str());
   os << "initial_graph_type CUSTOM\n";
   os << "n_vertices " << num_vertices(n) << "\n";
   os << "custom_graph_file " << graphname << "\n";
@@ -142,6 +144,61 @@ void toggle_edge
     add_edge(ft.first,ft.second,n);
 }
 
+#if 0
+// stuff for making lattices
+// http://stackoverflow.com/questions/7532675/copying-from-grid-graph-to-adjacency-list-with-boostcopy-graph
+typedef boost::grid_graph<2> Grid;
+typedef boost::graph_traits<Grid> GridTraits;
+
+template<typename Graph>
+struct grid_to_graph_vertex_copier {
+    typedef boost::property_map< Grid, boost::vertex_index_t>::type grid_vertex_index_map;
+    typedef typename boost::property_map< Graph, boost::vertex_index_t>::type graph_vertex_index_map;
+//typedef boost::property_map< Graph, ::vertex_position_t>::type graph_vertex_position_map;
+
+    const Grid& grid;
+    grid_vertex_index_map grid_vertex_index;
+    graph_vertex_index_map graph_vertex_index;
+    //graph_vertex_position_map graph_vertex_position;
+
+    grid_to_graph_vertex_copier(const Grid& grid_, Graph& graph)
+        : grid(grid_), grid_vertex_index(get(boost::vertex_index_t(), grid_)),
+        graph_vertex_index(get(boost::vertex_index_t(), graph))//,
+        //graph_vertex_position(get(::vertex_position_t(), graph))
+    {
+    }
+#if 0
+private:
+    Position grid_vertex_index_to_position(std::size_t idx) const {
+        unsigned num_dims = grid.dimensions();
+        assert(grid.dimensions() == 2);
+
+        idx %= grid.length(0) * grid.length(1);
+
+        Position ret;
+        ret.x = idx % grid.length(0);
+        ret.y = idx / grid.length(0);
+
+        return ret;
+    }
+#endif
+public:
+    void operator()(GridTraits::vertex_descriptor grid_vertex, typename boost::graph_traits<Graph>::vertex_descriptor graph_vertex) const {
+        //std::size_t idx = get(grid_vertex_index, grid_vertex);
+        //put(graph_vertex_index, graph_vertex, idx);
+        //Position pos = grid_vertex_index_to_position(idx);
+        //std::cout << "grid_vertex = " << idx << ", pos.x = " << pos.x << ", pos.y = " << pos.y << std::endl;
+        //put(graph_vertex_position, graph_vertex, pos);
+    }
+};
+
+template<typename Graph>
+struct grid_to_graph_edge_copier {
+    void operator()(GridTraits::edge_descriptor grid_edge, typename boost::graph_traits<Graph>::edge_descriptor graph_edge) const {
+    }
+};
+#endif
+
 // fill graph object with edges.
 // assumes num_vertices(n) is already as it should be
 // reads from parameters some of:
@@ -156,8 +213,8 @@ void toggle_edge
 //  custom_graph_file
 //  reverse_initial_graph
 //  flip_one_initial_edge
-template<typename network_t, typename params_t, typename RNG_t>
-void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
+template<typename network_t, typename params_t, typename rng_t>
+void construct_network(network_t&n, params_t&parameters, rng_t&rng)
 {
   string igt = parameters.initial_graph_type();
   if (igt == "COMPLETE")
@@ -220,7 +277,8 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
   }
   else if (igt == "RANDOM")
   { // Erdos-Renyi random graph with given size and density
-    typedef boost::erdos_renyi_iterator<boost::minstd_rand, network_t> ERgen;
+    //typedef boost::erdos_renyi_iterator<boost::minstd_rand, network_t> ERgen;
+    typedef boost::erdos_renyi_iterator<rng_t, network_t> ERgen;
     double density = parameters.graph_density();
     if (density > 0)
       copy(ERgen(rng, num_vertices(n), density), ERgen(), edge_inserter(n));
@@ -255,6 +313,35 @@ void construct_network(network_t&n, params_t&parameters, RNG_t&rng)
                parameters.pl_alpha(), pl_beta),
 	       PLGen(), edge_inserter(n));
   }
+	else if (igt == "LATTICE")
+	{ const std::size_t lattice_dimensions = 2; // variable # dimensions?  later.
+    //typedef boost::grid_graph<2> lattice_t;
+    //lattice_t::vertex_descriptor dims;
+		vector<int> dims(lattice_dimensions);
+    for (std::size_t i = 0; i < lattice_dimensions-1; ++i)
+    { const string *ds = parameters.get(string("lattice_dim_")+fstring("%u",i));
+      if (!ds) ds = parameters.get(string("lattice_dim")+fstring("%u",i));
+      if (!ds) ds = parameters.get("lattice_dim_generic");
+      dims[i] = ds ? string_to_unsigned(*ds) : 0;
+    }
+		// the last of the dimensions isn't a separate parameter, it's implied
+		// by the total network size.
+		dims[lattice_dimensions-1] = 1;
+		dims[lattice_dimensions-1] = 
+			num_vertices(n) / accumulate(dims.begin(), dims.end(), 1, multiplies<int>());
+    //lattice_t grid(dims);
+    //boost::copy_graph(grid, n, 
+				//boost::vertex_copy(grid_to_graph_vertex_copier<network_t>(grid, n))
+					//.edge_copy(grid_to_graph_edge_copier<network_t>()));
+		for (int x = 0; x < dims[0]; ++x)
+			for (int y = 0; y < dims[1]; ++y)
+			{ int index = x + y*dims[0];
+				add_edge(index, (x-1+dims[0])%dims[0] + y*dims[0], n);
+				add_edge(index, (x+1)%dims[0] + y*dims[0], n);
+				add_edge(index, x + ((y-1+dims[1])%dims[1])*dims[0], n);
+				add_edge(index, x + ((y+1)%dims[1])*dims[0], n);
+			}
+	}
   else if (igt == "CUSTOM")
   { const string *graphfile = parameters.get("custom_graph_file");
     // we assume the num_vertices is set correctly

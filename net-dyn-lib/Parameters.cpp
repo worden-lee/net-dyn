@@ -117,3 +117,15 @@ void Parameters::writeAllSettings(ostream&outs)
     if (const string *getki = get(*ki))
       outs << *ki << ' ' << *getki << '\n';
 }
+
+void Parameters::writeAllSettingsAsCSV(ostream&outs)
+{
+  list<string> keys;
+  // get all keys from the dictionary
+  transform(begin(),end(), inserter(keys,keys.begin()),
+	    _Select1st< pair<string,string> >());
+  // output key/value pairs using sorted order
+  for (list<string>::iterator ki = keys.begin(); ki != keys.end(); ++ki)
+    if (const string *getki = get(*ki))
+      outs << *ki << ',' << *getki << '\n';
+}
