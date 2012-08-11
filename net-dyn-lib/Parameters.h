@@ -343,8 +343,8 @@ public:
     if (!get("randSeed"))
       setrandSeed(time(0)*getpid());
   }
-  void parseSettingsFile(string filename);
-  void parseSettings(istream &);
+  virtual void parseSettingsFile(string filename);
+  virtual void parseSettings(istream &);
   virtual string cleanLine(string);
   virtual void parseLine(string);
 

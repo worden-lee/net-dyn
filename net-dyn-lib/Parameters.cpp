@@ -11,11 +11,9 @@ void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
   if (init_settings != 0)
     loadDefaults(init_settings);
   for ( ++argv; (*argv); ++argv )
-  {
-    string arg(*argv);
+  { string arg(*argv);
     if (arg=="-f")
-    {
-      //cout << "argument: -f " << argv[1] << endl;
+    { //cout << "argument: -f " << argv[1] << endl;
       string filename(*++argv);
       parseSettingsFile(filename);
     }
@@ -29,8 +27,7 @@ void Parameters::handleArgs(int argc, char **argv, const char *init_settings)
       parseLine(line);
     }
     else
-    {
-      cout << "unknown argument: " << arg << endl;
+    { cout << "unknown argument: " << arg << endl;
     }
   }
 }
@@ -56,17 +53,14 @@ void Parameters::parseSettingsFile(string filename)
 // otherwise the line will be ignored or misinterpreted.
 // leading and trailing spaces are ignored.
 void Parameters::parseSettings(istream &file)
-{
-  string line;
+{ string line;
   while (getline(file,line))
-  {
-    parseLine(line);
+  { parseLine(line);
   }
 }
 
 string Parameters::cleanLine(string line)
-{
-  // get rid of anything starting with #
+{ // get rid of anything starting with #
   string::size_type pound = line.find('#');
   if (pound != string::npos)
     line.erase(pound);
@@ -85,8 +79,7 @@ string Parameters::cleanLine(string line)
 }
 
 void Parameters::parseLine(string line)
-{
-  line = cleanLine(line);
+{ line = cleanLine(line);
 
   // check for include directive
   string directive("include ");
