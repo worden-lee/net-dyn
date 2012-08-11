@@ -338,23 +338,30 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
 		for (int x = 0; x < dims[0]; ++x)
 			for (int y = 0; y < dims[1]; ++y)
 			{ int index = x + y*dims[0];
-				if (metric == "taxicab")
+				if (metric == "infinity")
 				{ for (int dx = -nr; dx <= nr; ++dx)
 						for (int dy = -nr; dy <= nr; ++dy)
 							if (dx != 0 || dy != 0)
 							{ add_edge(index, 
 										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
 										n);
+							  //cout << ' ' << index << " -> " 
+								//	<< ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
+								//	<< "\n";
 							}
 				}
-				else if (metric == "infinity")
+				else if (metric == "taxicab")
 				{ for (int dx = -nr; dx <= nr; ++dx)
 					{ int ny = nr - abs(dx);
 						for (int dy = -ny; dy <= ny; ++dy)
 							if (dx != 0 || dy != 0)
-								add_edge(index, 
+							{ add_edge(index, 
 										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
 										n);
+							  //cout << ' ' << index << " -> "
+								//	<< ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
+								//	<< "\n";
+							}
 					}
 				}
 				else
