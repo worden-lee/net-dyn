@@ -155,7 +155,7 @@ inline string int_to_string(int x)
 inline unsigned string_to_unsigned(const string &x)
 { return (unsigned)atol(x.c_str()); }
 inline string unsigned_to_string(unsigned x)
-{ return string(fstring("%ud",x)); }
+{ return string(fstring("%u",x)); }
 
 inline long string_to_long(const string &x)
 { return atol(x.c_str()); }
