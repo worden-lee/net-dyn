@@ -333,7 +333,7 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
     //boost::copy_graph(grid, n, 
 				//boost::vertex_copy(grid_to_graph_vertex_copier<network_t>(grid, n))
 					//.edge_copy(grid_to_graph_edge_copier<network_t>()));
-		unsigned nr = parameters.neighborhood_radius();
+		int nr = parameters.neighborhood_radius();
 		string metric = parameters.lattice_metric();
 		for (int x = 0; x < dims[0]; ++x)
 			for (int y = 0; y < dims[1]; ++y)
@@ -341,21 +341,24 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
 				if (metric == "taxicab")
 				{ for (int dx = -nr; dx <= nr; ++dx)
 						for (int dy = -nr; dy <= nr; ++dy)
-							if (dx != 0 or dy != 0)
-								add_edge(index, 
+							if (dx != 0 || dy != 0)
+							{ add_edge(index, 
 										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
 										n);
+							}
 				}
 				else if (metric == "infinity")
 				{ for (int dx = -nr; dx <= nr; ++dx)
 					{ int ny = nr - abs(dx);
 						for (int dy = -ny; dy <= ny; ++dy)
-							if (dx != 0 or dy != 0)
+							if (dx != 0 || dy != 0)
 								add_edge(index, 
 										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
 										n);
 					}
 				}
+				else
+					cerr<< "Unknown value of lattice_metric: " << metric << "\n";
 			}
 	}
   else if (igt == "CUSTOM")
