@@ -333,21 +333,28 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
     //boost::copy_graph(grid, n, 
 				//boost::vertex_copy(grid_to_graph_vertex_copier<network_t>(grid, n))
 					//.edge_copy(grid_to_graph_edge_copier<network_t>()));
-		unsigned nn = parameters.n_neighbors();
+		unsigned nr = parameters.neighborhood_radius();
+		string metric = parameters.lattice_metric();
 		for (int x = 0; x < dims[0]; ++x)
 			for (int y = 0; y < dims[1]; ++y)
 			{ int index = x + y*dims[0];
-				if (nn >= 4) {
-					add_edge(index, (x-1+dims[0])%dims[0] + y*dims[0], n);
-					add_edge(index, (x+1)%dims[0] + y*dims[0], n);
-					add_edge(index, x + ((y-1+dims[1])%dims[1])*dims[0], n);
-					add_edge(index, x + ((y+1)%dims[1])*dims[0], n);
+				if (metric == "taxicab")
+				{ for (int dx = -nr; dx <= nr; ++dx)
+						for (int dy = -nr; dy <= nr; ++dy)
+							if (dx != 0 or dy != 0)
+								add_edge(index, 
+										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
+										n);
 				}
-				if (nn >= 8) {
-					add_edge(index, (x-1+dims[0])%dims[0] + ((y-1+dims[1])%dims[1])*dims[0], n);
-					add_edge(index, (x+1)%dims[0] + ((y-1+dims[1])%dims[1])*dims[0], n);
-					add_edge(index, (x-1+dims[0])%dims[0] + ((y+1)%dims[1])*dims[0], n);
-					add_edge(index, (x+1)%dims[0] + ((y+1)%dims[1])*dims[0], n);
+				else if (metric == "infinity")
+				{ for (int dx = -nr; dx <= nr; ++dx)
+					{ int ny = nr - abs(dx);
+						for (int dy = -ny; dy <= ny; ++dy)
+							if (dx != 0 or dy != 0)
+								add_edge(index, 
+										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
+										n);
+					}
 				}
 			}
 	}
