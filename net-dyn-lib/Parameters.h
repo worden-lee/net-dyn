@@ -357,14 +357,16 @@ public:
 
   // this is called after all settings are read in
   virtual void afterSetting(void)
-  { string dumpfile = 
-      outputDirectory()+"/"+paramsDumpFile();
+  { string pd = paramsDumpFile();
+		string dumpfile = outputDirectory()+"/"+pd;
     int mp = mkpath(dumpfile.c_str());
     if (mp)
     { string perr = 
           "Creating output directory and settings file " + dumpfile;
       perror(perr.c_str());
     }
+		if (pd == "")
+			return;
     ofstream dumpto(dumpfile.c_str());
     writeAllSettings(dumpto);
   }

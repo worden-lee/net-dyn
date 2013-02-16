@@ -313,6 +313,13 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
                parameters.pl_alpha(), pl_beta),
 	       PLGen(), edge_inserter(n));
   }
+	else if (igt == "REGULAR")
+	{ typedef molloy_reed_iterator<rng_t,network_t> MRGen;
+		// degree distribution assigns all n vertices degree "n_neighbors".
+		unsigned nsize = parameters.n_neighbors();
+		vector<unsigned> deg_vector(num_vertices(n),nsize);
+		copy(MRGen(rng, deg_vector, deg_vector), MRGen(), edge_inserter(n));
+	}
 	else if (igt == "LATTICE")
 	{ const std::size_t lattice_dimensions = 2; // variable # dimensions?  later.
     //typedef boost::grid_graph<2> lattice_t;

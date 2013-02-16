@@ -71,7 +71,7 @@ public:
 
   reference operator*() const
   { if (0 <= current_index && current_index < in_stubs->size())
-    { //cout << "here's an edge: " << current_edge << endl;
+    { //cout << "here's an edge: " << current_edge.first << ", " << current_edge.second << "\n";
       return current_edge;
     }
     cerr << "bad molloy-reed iterator dereference" << endl;
