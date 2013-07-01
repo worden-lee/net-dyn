@@ -12,6 +12,7 @@
 
 #include <iostream>
 #include <fstream>
+#include <sstream>
 #include <vector>
 #include <deque>
 #include <string>
@@ -55,9 +56,9 @@ string canonical(const boost::adjacency_list<A,boost::vecS,C,D,E,F,G>&n)
 template<typename A,  typename C, typename D,
          typename E, typename F, typename G>
 string canonical(const boost::adjacency_list<A,boost::setS,C,D,E,F,G>&n)
-{ ostringstream os;
-  typedef boost::adjacency_list<A,boost::setS,C,D,E,F,G> graph_t;
+{ typedef boost::adjacency_list<A,boost::setS,C,D,E,F,G> graph_t;
   typename graph_traits<graph_t>::edge_iterator ei,eend;
+  std::ostringstream os;
   for (tie(ei,eend) = edges(n); ei != eend; ++ei)
     os << *ei << '\n';
   return os.str();
