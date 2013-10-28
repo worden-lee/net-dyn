@@ -9,3 +9,6 @@ net-dyn-lib/% : /proc/uptime
 
 landscape/% : /proc/uptime
 	$(MAKE) -C landscape $*
+
+libexecdir/exec-stream.o : libexecdir/exec-stream.cpp libexecdir/exec-stream.h
+	$(CXX) $(CPPFLAGS) $(CFLAGS) $(CXXFLAGS) -c $< -o $@
