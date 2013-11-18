@@ -7,8 +7,8 @@
 ** Last update Sun Dec 30 19:26:53 2007 
 */
 
-#ifndef   	NETWORKS_H_
-# define   	NETWORKS_H_
+#ifndef     NETWORKS_H_
+# define     NETWORKS_H_
 
 #include <iostream>
 #include <fstream>
@@ -72,7 +72,7 @@ void write_snapshot(boost::adjacency_list<A,B,C,D,E,F,G>&n,
 { string basename
     = params.outputDirectory()+"/snapshot-"+double_to_string(time);
   string graphname = basename + ".adjacency";
-	std::ofstream os((basename+".settings").c_str());
+  std::ofstream os((basename+".settings").c_str());
   os << "initial_graph_type CUSTOM\n";
   os << "n_vertices " << num_vertices(n) << "\n";
   os << "custom_graph_file " << graphname << "\n";
@@ -291,7 +291,7 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
     typedef powerlaw_iterator_fixed_density<rng_t,network_t> PLGen;
     copy(PLGen(n, rng, num_vertices(n),
                parameters.graph_density(), parameters.pl_in_exp(),
-	             parameters.pl_out_exp()),
+               parameters.pl_out_exp()),
          PLGen::end(), edge_inserter(n));
 #else
     typedef power_law_molloy_reed_iterator<rng_t,network_t> PLGen;
@@ -312,70 +312,82 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
     }
     copy(PLGen(rng, num_vertices(n),
                parameters.pl_alpha(), pl_beta),
-	       PLGen(), edge_inserter(n));
+         PLGen(), edge_inserter(n));
   }
-	else if (igt == "REGULAR")
-	{ typedef molloy_reed_iterator<rng_t,network_t> MRGen;
-		// degree distribution assigns all n vertices degree "n_neighbors".
-		unsigned nsize = parameters.n_neighbors();
-		vector<unsigned> deg_vector(num_vertices(n),nsize);
-		copy(MRGen(rng, deg_vector, deg_vector), MRGen(), edge_inserter(n));
-	}
-	else if (igt == "LATTICE")
-	{ const std::size_t lattice_dimensions = 2; // variable # dimensions?  later.
+  else if (igt == "REGULAR")
+  { typedef molloy_reed_iterator<rng_t,network_t> MRGen;
+    // degree distribution assigns all n vertices degree "n_neighbors".
+    unsigned nsize = parameters.n_neighbors();
+    vector<unsigned> deg_vector(num_vertices(n),nsize);
+    copy(MRGen(rng, deg_vector, deg_vector), MRGen(), edge_inserter(n));
+  }
+  else if (igt == "LATTICE")
+  { const std::size_t lattice_dimensions = 2; // variable # dimensions?  later.
     //typedef boost::grid_graph<2> lattice_t;
     //lattice_t::vertex_descriptor dims;
-		vector<int> dims(lattice_dimensions);
+    vector<int> dims(lattice_dimensions);
     for (std::size_t i = 0; i < lattice_dimensions-1; ++i)
     { const string *ds = parameters.get(string("lattice_dim_")+fstring("%u",i));
       if (!ds) ds = parameters.get(string("lattice_dim")+fstring("%u",i));
       if (!ds) ds = parameters.get("lattice_dim_generic");
       dims[i] = ds ? string_to_unsigned(*ds) : 0;
     }
-		// the last of the dimensions isn't a separate parameter, it's implied
-		// by the total network size.
-		dims[lattice_dimensions-1] = 1;
-		dims[lattice_dimensions-1] = 
-			num_vertices(n) / accumulate(dims.begin(), dims.end(), 1, multiplies<int>());
+    // the last of the dimensions isn't a separate parameter, it's implied
+    // by the total network size.
+    dims[lattice_dimensions-1] = 1;
+    dims[lattice_dimensions-1] = 
+      num_vertices(n) / accumulate(dims.begin(), dims.end(), 1, multiplies<int>());
     //lattice_t grid(dims);
     //boost::copy_graph(grid, n, 
-				//boost::vertex_copy(grid_to_graph_vertex_copier<network_t>(grid, n))
-					//.edge_copy(grid_to_graph_edge_copier<network_t>()));
-		int nr = parameters.neighborhood_radius();
-		string metric = parameters.lattice_metric();
-		for (int x = 0; x < dims[0]; ++x)
-			for (int y = 0; y < dims[1]; ++y)
-			{ int index = x + y*dims[0];
-				if (metric == "infinity")
-				{ for (int dx = -nr; dx <= nr; ++dx)
-						for (int dy = -nr; dy <= nr; ++dy)
-							if (dx != 0 || dy != 0)
-							{ add_edge(index, 
-										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
-										n);
-							  //cout << ' ' << index << " -> " 
-								//	<< ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
-								//	<< "\n";
-							}
-				}
-				else if (metric == "taxicab")
-				{ for (int dx = -nr; dx <= nr; ++dx)
-					{ int ny = nr - abs(dx);
-						for (int dy = -ny; dy <= ny; ++dy)
-							if (dx != 0 || dy != 0)
-							{ add_edge(index, 
-										(x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
-										n);
-							  //cout << ' ' << index << " -> "
-								//	<< ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
-								//	<< "\n";
-							}
-					}
-				}
-				else
-					cerr<< "Unknown value of lattice_metric: " << metric << "\n";
-			}
-	}
+        //boost::vertex_copy(grid_to_graph_vertex_copier<network_t>(grid, n))
+          //.edge_copy(grid_to_graph_edge_copier<network_t>()));
+    int nr = parameters.neighborhood_radius();
+    // Notes on neighborhood topologies:
+    // In infinity norm, neighborhood of radius nr is all points
+    // for which max(|dx|,|dy|) <= nr.
+    // So for nr = 1, 8 = 9 - 1 points, not including the center point.
+    // For nr = 2, 24 = 25 - 1 points.
+    // For general nr, (2*nr + 1)^2 points.
+    // In infinity norm, neighborhood of radius nr is all points
+    // for which |dx| + |dy| <= nr.
+    // So for nr = 1, 4 points,
+    // For nr = 2, 4 + 9 - 1 = 12 points,
+    // For nr = 3, 9 + 16 - 1 = 24 points,
+    // For general nr, nr^2 + (nr+1)^2 - 1 points.
+    string metric = parameters.lattice_metric();
+    for (int x = 0; x < dims[0]; ++x)
+      for (int y = 0; y < dims[1]; ++y)
+      { int index = x + y*dims[0];
+        if (metric == "infinity")
+        { for (int dx = -nr; dx <= nr; ++dx)
+            for (int dy = -nr; dy <= nr; ++dy)
+              if (dx != 0 || dy != 0)
+              { add_edge(index, 
+                    (x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
+                    n);
+                //cout << ' ' << index << " -> " 
+                //  << ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
+                //  << "\n";
+              }
+        }
+        else if (metric == "taxicab")
+        { for (int dx = -nr; dx <= nr; ++dx)
+          { int ny = nr - abs(dx);
+            for (int dy = -ny; dy <= ny; ++dy)
+              if (dx != 0 || dy != 0)
+              { add_edge(index, 
+                    (x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0], 
+                    n);
+                //cout << ' ' << index << " -> "
+                //  << ((x+dx+dims[0])%dims[0] + ((y+dy+dims[1])%dims[1])*dims[0])
+                //  << "\n";
+              }
+          }
+        }
+        else
+          cerr<< "Unknown value of lattice_metric: " << metric << "\n";
+      }
+  }
   else if (igt == "CUSTOM")
   { const string *graphfile = parameters.get("custom_graph_file");
     // we assume the num_vertices is set correctly
@@ -436,4 +448,4 @@ void print_object(network_t &n, ostream&os)
   }
 }
 
-#endif 	    /* !NETWORKS_H_ */
+#endif       /* !NETWORKS_H_ */
