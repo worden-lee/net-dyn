@@ -8,6 +8,7 @@
 using std::map;
 #include <time.h>
 #include <math.h>
+#include <unistd.h>
 
 #ifdef __unix__
 #define UNIX

@@ -12,6 +12,7 @@
 #ifndef   	NETWORK_MUTATION_H_
 # define   	NETWORK_MUTATION_H_
 
+#include "util.h"
 #include <boost/tuple/tuple.hpp>
 using namespace boost;
 
