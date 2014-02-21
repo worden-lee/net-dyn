@@ -347,7 +347,7 @@ void construct_network(network_t&n, params_t&parameters, rng_t&rng)
     // for which max(|dx|,|dy|) <= nr.
     // So for nr = 1, 8 = 9 - 1 points, not including the center point.
     // For nr = 2, 24 = 25 - 1 points.
-    // For general nr, (2*nr + 1)^2 points.
+    // For general nr, (2*nr + 1)^2 - 1 points.
     // In infinity norm, neighborhood of radius nr is all points
     // for which |dx| + |dy| <= nr.
     // So for nr = 1, 4 points,
